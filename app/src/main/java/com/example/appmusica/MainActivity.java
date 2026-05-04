@@ -1,7 +1,5 @@
 package com.example.appmusica;
 
-import android.graphics.Color;
-import android.graphics.Typeface;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -12,6 +10,7 @@ import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
@@ -20,8 +19,18 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.appmusica.api.AlbumRemote;
+import com.example.appmusica.api.SongRemote;
+import com.example.appmusica.api.SupabaseClient;
+import com.example.appmusica.api.SupabaseConfig;
+import com.example.appmusica.api.SupabaseService;
+
 import java.util.ArrayList;
 import java.util.List;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -64,13 +73,14 @@ public class MainActivity extends AppCompatActivity {
         );
 
         initViews();
-        setupData();
         setupRecyclerViews();
         setupNavigation();
         setupSearch();
         setupProfileButtons();
-        updateProfileStats();
         showSection("home");
+
+        loadSongsFromSupabase();
+        loadAlbumsFromSupabase();
     }
 
     private void initViews() {
@@ -104,74 +114,243 @@ public class MainActivity extends AppCompatActivity {
         btnLogout = findViewById(R.id.btnLogout);
     }
 
-    private void setupData() {
-        allSongs.clear();
-        allAlbums.clear();
+    private void setupRecyclerViews() {
+        if (rvHomeRecent != null) {
+            rvHomeRecent.setLayoutManager(new LinearLayoutManager(this));
+            homeRecentAdapter = new SongAdapter(new ArrayList<>(), this::showSongDialog);
+            rvHomeRecent.setAdapter(homeRecentAdapter);
+        }
 
-        allSongs.add(new Song("Bohemian Rhapsody", "Queen", "A Night at the Opera", "5:55", 1975, "Rock", 4.9, "1.2k"));
-        allSongs.add(new Song("Imagine", "John Lennon", "Imagine", "3:03", 1971, "Rock", 4.7, "856"));
-        allSongs.add(new Song("Billie Jean", "Michael Jackson", "Thriller", "4:54", 1983, "Pop", 4.6, "1.1k"));
-        allSongs.add(new Song("Smells Like Teen Spirit", "Nirvana", "Nevermind", "5:01", 1991, "Grunge", 4.8, "934"));
-        allSongs.add(new Song("Fix You", "Coldplay", "X&Y", "4:55", 2005, "Rock", 3.0, "642"));
-        allSongs.add(new Song("Friday I'm in Love", "The Cure", "Wish", "3:35", 1992, "Pop", 2.0, "388"));
+        if (rvSongs != null) {
+            rvSongs.setLayoutManager(new LinearLayoutManager(this));
+            songAdapter = new SongAdapter(new ArrayList<>(), this::showSongDialog);
+            rvSongs.setAdapter(songAdapter);
+        }
 
-        allAlbums.add(new Album("Abbey Road", "The Beatles", 1969, 17, "Rock", 4.9, "1.5k"));
-        allAlbums.add(new Album("Thriller", "Michael Jackson", 1982, 9, "Pop", 4.7, "2.1k"));
-        allAlbums.add(new Album("The Wall", "Pink Floyd", 1979, 26, "Progressive", 4.6, "987"));
+        if (rvAlbums != null) {
+            rvAlbums.setLayoutManager(new LinearLayoutManager(this));
+            albumAdapter = new AlbumAdapter(new ArrayList<>());
+            rvAlbums.setAdapter(albumAdapter);
+        }
     }
 
-    private void setupRecyclerViews() {
-        rvHomeRecent.setLayoutManager(new LinearLayoutManager(this));
-        rvSongs.setLayoutManager(new LinearLayoutManager(this));
-        rvAlbums.setLayoutManager(new LinearLayoutManager(this));
+    private void loadSongsFromSupabase() {
+        SupabaseService service = SupabaseClient.getService();
 
-        List<Song> homeSongs = new ArrayList<>();
-        homeSongs.add(allSongs.get(0));
-        homeSongs.add(allSongs.get(4));
-        homeSongs.add(allSongs.get(5));
+        service.getCanciones(
+                SupabaseConfig.API_KEY,
+                SupabaseClient.getAuthorizationHeader()
+        ).enqueue(new Callback<List<SongRemote>>() {
+            @Override
+            public void onResponse(Call<List<SongRemote>> call, Response<List<SongRemote>> response) {
+                if (!response.isSuccessful()) {
+                    Toast.makeText(
+                            MainActivity.this,
+                            "Error canciones Supabase: " + response.code(),
+                            Toast.LENGTH_LONG
+                    ).show();
+                    return;
+                }
 
-        homeRecentAdapter = new SongAdapter(homeSongs, this::showSongDialog);
-        rvHomeRecent.setAdapter(homeRecentAdapter);
+                List<SongRemote> remoteSongs = response.body();
 
-        songAdapter = new SongAdapter(new ArrayList<>(allSongs), this::showSongDialog);
-        rvSongs.setAdapter(songAdapter);
+                if (remoteSongs == null) {
+                    Toast.makeText(
+                            MainActivity.this,
+                            "Supabase devuelve canciones NULL",
+                            Toast.LENGTH_LONG
+                    ).show();
+                    return;
+                }
 
-        albumAdapter = new AlbumAdapter(new ArrayList<>(allAlbums));
-        rvAlbums.setAdapter(albumAdapter);
+                allSongs.clear();
+
+                for (SongRemote remote : remoteSongs) {
+                    Song song = new Song(
+                            safeText(remote.titulo),
+                            safeText(remote.artista),
+                            safeText(remote.album),
+                            safeText(remote.duracion),
+                            remote.anio,
+                            safeText(remote.genero),
+                            remote.notaMedia,
+                            safeText(remote.numeroValoraciones)
+                    );
+
+                    allSongs.add(song);
+                }
+
+                if (songAdapter != null) {
+                    songAdapter.updateList(new ArrayList<>(allSongs));
+                }
+
+                if (homeRecentAdapter != null) {
+                    List<Song> homeSongs = new ArrayList<>();
+
+                    for (int i = 0; i < allSongs.size() && i < 3; i++) {
+                        homeSongs.add(allSongs.get(i));
+                    }
+
+                    homeRecentAdapter.updateList(homeSongs);
+                }
+
+                updateProfileStats();
+
+                Toast.makeText(
+                        MainActivity.this,
+                        "Canciones desde Supabase: " + allSongs.size(),
+                        Toast.LENGTH_SHORT
+                ).show();
+            }
+
+            @Override
+            public void onFailure(Call<List<SongRemote>> call, Throwable t) {
+                Toast.makeText(
+                        MainActivity.this,
+                        "Fallo conexión canciones: " + t.getMessage(),
+                        Toast.LENGTH_LONG
+                ).show();
+            }
+        });
+    }
+
+    private void loadAlbumsFromSupabase() {
+        SupabaseService service = SupabaseClient.getService();
+
+        service.getAlbumes(
+                SupabaseConfig.API_KEY,
+                SupabaseClient.getAuthorizationHeader()
+        ).enqueue(new Callback<List<AlbumRemote>>() {
+            @Override
+            public void onResponse(Call<List<AlbumRemote>> call, Response<List<AlbumRemote>> response) {
+                if (!response.isSuccessful()) {
+                    Toast.makeText(
+                            MainActivity.this,
+                            "Error álbumes Supabase: " + response.code(),
+                            Toast.LENGTH_LONG
+                    ).show();
+                    return;
+                }
+
+                List<AlbumRemote> remoteAlbums = response.body();
+
+                if (remoteAlbums == null) {
+                    Toast.makeText(
+                            MainActivity.this,
+                            "Supabase devuelve álbumes NULL",
+                            Toast.LENGTH_LONG
+                    ).show();
+                    return;
+                }
+
+                allAlbums.clear();
+
+                for (AlbumRemote remote : remoteAlbums) {
+                    Album album = new Album(
+                            safeText(remote.titulo),
+                            safeText(remote.artista),
+                            remote.anio,
+                            remote.numeroCanciones,
+                            safeText(remote.genero),
+                            remote.notaMedia,
+                            safeText(remote.numeroValoraciones)
+                    );
+
+                    allAlbums.add(album);
+                }
+
+                if (albumAdapter != null) {
+                    albumAdapter.updateList(new ArrayList<>(allAlbums));
+                }
+
+                updateProfileStats();
+
+                Toast.makeText(
+                        MainActivity.this,
+                        "Álbumes desde Supabase: " + allAlbums.size(),
+                        Toast.LENGTH_SHORT
+                ).show();
+            }
+
+            @Override
+            public void onFailure(Call<List<AlbumRemote>> call, Throwable t) {
+                Toast.makeText(
+                        MainActivity.this,
+                        "Fallo conexión álbumes: " + t.getMessage(),
+                        Toast.LENGTH_LONG
+                ).show();
+            }
+        });
+    }
+
+    private String safeText(String text) {
+        return text != null ? text : "";
     }
 
     private void setupNavigation() {
-        navHome.setOnClickListener(v -> showSection("home"));
-        navSongs.setOnClickListener(v -> showSection("songs"));
-        navAlbums.setOnClickListener(v -> showSection("albums"));
-        navProfile.setOnClickListener(v -> showSection("profile"));
+        if (navHome != null) {
+            navHome.setOnClickListener(v -> showSection("home"));
+        }
 
-        btnExploreMusic.setOnClickListener(v -> showSection("songs"));
-        btnMyLibrary.setOnClickListener(v -> showSection("albums"));
+        if (navSongs != null) {
+            navSongs.setOnClickListener(v -> showSection("songs"));
+        }
 
-        profileIcon.setOnClickListener(v -> showAccountSettingsDialog());
+        if (navAlbums != null) {
+            navAlbums.setOnClickListener(v -> showSection("albums"));
+        }
+
+        if (navProfile != null) {
+            navProfile.setOnClickListener(v -> showSection("profile"));
+        }
+
+        if (btnExploreMusic != null) {
+            btnExploreMusic.setOnClickListener(v -> showSection("songs"));
+        }
+
+        if (btnMyLibrary != null) {
+            btnMyLibrary.setOnClickListener(v -> showSection("albums"));
+        }
+
+        if (profileIcon != null) {
+            profileIcon.setOnClickListener(v -> showAccountSettingsDialog());
+        }
     }
 
     private void setupSearch() {
-        etSearchSongs.addTextChangedListener(new TextWatcher() {
-            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-            @Override public void afterTextChanged(Editable s) {}
+        if (etSearchSongs != null) {
+            etSearchSongs.addTextChangedListener(new TextWatcher() {
+                @Override
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                }
 
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-                filterSongs(s.toString());
-            }
-        });
+                @Override
+                public void afterTextChanged(Editable s) {
+                }
 
-        etSearchAlbums.addTextChangedListener(new TextWatcher() {
-            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-            @Override public void afterTextChanged(Editable s) {}
+                @Override
+                public void onTextChanged(CharSequence s, int start, int before, int count) {
+                    filterSongs(s.toString());
+                }
+            });
+        }
 
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-                filterAlbums(s.toString());
-            }
-        });
+        if (etSearchAlbums != null) {
+            etSearchAlbums.addTextChangedListener(new TextWatcher() {
+                @Override
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                }
+
+                @Override
+                public void afterTextChanged(Editable s) {
+                }
+
+                @Override
+                public void onTextChanged(CharSequence s, int start, int before, int count) {
+                    filterAlbums(s.toString());
+                }
+            });
+        }
     }
 
     private void setupProfileButtons() {
@@ -205,18 +384,23 @@ public class MainActivity extends AppCompatActivity {
         if (tvSongCount != null) {
             tvSongCount.setText(String.valueOf(allSongs.size()));
         }
+
         if (tvAlbumCount != null) {
             tvAlbumCount.setText(String.valueOf(allAlbums.size()));
         }
     }
 
     private void filterSongs(String text) {
+        if (songAdapter == null) return;
+
         List<Song> filtered = new ArrayList<>();
         String query = text.toLowerCase().trim();
 
         for (Song song : allSongs) {
             if (song.getTitle().toLowerCase().contains(query) ||
-                    song.getArtist().toLowerCase().contains(query)) {
+                    song.getArtist().toLowerCase().contains(query) ||
+                    song.getAlbum().toLowerCase().contains(query) ||
+                    song.getGenre().toLowerCase().contains(query)) {
                 filtered.add(song);
             }
         }
@@ -225,12 +409,15 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void filterAlbums(String text) {
+        if (albumAdapter == null) return;
+
         List<Album> filtered = new ArrayList<>();
         String query = text.toLowerCase().trim();
 
         for (Album album : allAlbums) {
             if (album.getTitle().toLowerCase().contains(query) ||
-                    album.getArtist().toLowerCase().contains(query)) {
+                    album.getArtist().toLowerCase().contains(query) ||
+                    album.getGenre().toLowerCase().contains(query)) {
                 filtered.add(album);
             }
         }
@@ -239,23 +426,34 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void showSection(String section) {
-        sectionHome.setVisibility(View.GONE);
-        sectionSongs.setVisibility(View.GONE);
-        sectionAlbums.setVisibility(View.GONE);
-        sectionProfile.setVisibility(View.GONE);
+        if (sectionHome != null) sectionHome.setVisibility(View.GONE);
+        if (sectionSongs != null) sectionSongs.setVisibility(View.GONE);
+        if (sectionAlbums != null) sectionAlbums.setVisibility(View.GONE);
+        if (sectionProfile != null) sectionProfile.setVisibility(View.GONE);
 
         switch (section) {
             case "songs":
-                sectionSongs.setVisibility(View.VISIBLE);
+                if (sectionSongs != null) {
+                    sectionSongs.setVisibility(View.VISIBLE);
+                }
                 break;
+
             case "albums":
-                sectionAlbums.setVisibility(View.VISIBLE);
+                if (sectionAlbums != null) {
+                    sectionAlbums.setVisibility(View.VISIBLE);
+                }
                 break;
+
             case "profile":
-                sectionProfile.setVisibility(View.VISIBLE);
+                if (sectionProfile != null) {
+                    sectionProfile.setVisibility(View.VISIBLE);
+                }
                 break;
+
             default:
-                sectionHome.setVisibility(View.VISIBLE);
+                if (sectionHome != null) {
+                    sectionHome.setVisibility(View.VISIBLE);
+                }
                 break;
         }
     }
@@ -280,7 +478,11 @@ public class MainActivity extends AppCompatActivity {
         new AlertDialog.Builder(this)
                 .setTitle("Configuración de la cuenta")
                 .setMessage("Aquí podrás gestionar tu cuenta.")
-                .setPositiveButton("Cambiar foto", (dialog, which) -> pickImageLauncher.launch("image/*"))
+                .setPositiveButton("Cambiar foto", (dialog, which) -> {
+                    if (pickImageLauncher != null) {
+                        pickImageLauncher.launch("image/*");
+                    }
+                })
                 .setNegativeButton("Cerrar", null)
                 .show();
     }
