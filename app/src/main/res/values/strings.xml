@@ -1,3 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">AppMusica</string>
+    <string name="app_name">YourTune</string>
+    <string name="logo_description">Logo</string>
+    <string name="profile_description">Perfil</string>
+    <string name="nav_home">Inicio</string>
+    <string name="nav_songs">Canciones</string>
+    <string name="nav_albums">Álbumes</string>
+    <string name="nav_profile">Perfil</string>
+    <string name="btn_explore">Explorar Música</string>
+    <string name="btn_library">Mi Biblioteca</string>
+    <string name="label_profile">Perfil</string>
+    <string name="user_name">Usuario: user1</string>
+    <string name="fav_songs_count">Canciones favoritas: 12</string>
+    <string name="fav_albums_count">Álbumes favoritos: 5</string>
 </resources>
