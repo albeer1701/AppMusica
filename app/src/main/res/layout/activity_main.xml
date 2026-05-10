@@ -38,7 +38,7 @@
                 android:layout_height="44dp"
                 android:layout_marginStart="12dp"
                 android:background="@drawable/bg_button_outline"
-                android:contentDescription="Perfil"
+                android:contentDescription="Cuenta"
                 android:padding="2dp"
                 android:scaleType="centerCrop"
                 android:src="@drawable/logo" />
@@ -63,7 +63,7 @@
                 android:contentDescription="Inicio"
                 android:padding="12dp"
                 android:scaleType="fitCenter"
-                android:src="@drawable/logo"/>
+                android:src="@drawable/logo" />
 
             <Button
                 android:id="@+id/navSongs"
@@ -82,8 +82,6 @@
                 android:paddingStart="6dp"
                 android:paddingEnd="6dp"
                 android:text="Canciones"
-                android:elevation="8dp"
-                android:translationZ="4dp"
                 android:textAllCaps="false"
                 android:textColor="@android:color/white"
                 android:textSize="14sp"
@@ -166,12 +164,31 @@
                 android:textColor="@android:color/white"
                 android:textStyle="bold" />
 
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="22dp"
+                android:text="Listas destacadas"
+                android:textColor="@android:color/white"
+                android:textSize="22sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Playlists populares para descubrir música"
+                android:textColor="#A7B6C2"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rvHomeRecent"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
+                android:layout_marginTop="14dp"
                 android:nestedScrollingEnabled="false" />
+
         </LinearLayout>
 
         <LinearLayout
@@ -198,6 +215,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
                 android:nestedScrollingEnabled="false" />
+
         </LinearLayout>
 
         <LinearLayout
@@ -224,6 +242,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
                 android:nestedScrollingEnabled="false" />
+
         </LinearLayout>
 
         <LinearLayout
@@ -237,96 +256,114 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp"
-                android:text="Perfil"
+                android:text="Perfil musical"
                 android:textColor="@android:color/white"
-                android:textSize="22sp"
+                android:textSize="24sp"
                 android:textStyle="bold" />
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp"
-                android:background="@drawable/bg_card"
-                android:orientation="horizontal"
-                android:padding="12dp">
+                android:orientation="horizontal">
 
-                <LinearLayout
+                <Button
+                    android:id="@+id/btnSortBest"
                     android:layout_width="0dp"
-                    android:layout_height="wrap_content"
+                    android:layout_height="44dp"
+                    android:layout_marginEnd="6dp"
                     android:layout_weight="1"
-                    android:orientation="vertical">
+                    android:background="@drawable/bg_button_selected"
+                    android:backgroundTint="@null"
+                    app:backgroundTint="@null"
+                    android:text="Mejor valoradas"
+                    android:textAllCaps="false"
+                    android:textColor="@android:color/white"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Canciones"
-                        android:textColor="@android:color/white"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:id="@+id/tvSongCount"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="0"
-                        android:textColor="@android:color/white"
-                        android:textStyle="bold" />
-                </LinearLayout>
-
-                <LinearLayout
+                <Button
+                    android:id="@+id/btnSortWorst"
                     android:layout_width="0dp"
-                    android:layout_height="wrap_content"
+                    android:layout_height="44dp"
+                    android:layout_marginStart="6dp"
                     android:layout_weight="1"
-                    android:orientation="vertical">
+                    android:background="@drawable/bg_button_selected"
+                    android:backgroundTint="@null"
+                    app:backgroundTint="@null"
+                    android:text="Peor valoradas"
+                    android:textAllCaps="false"
+                    android:textColor="@android:color/white"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Álbumes"
-                        android:textColor="@android:color/white"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:id="@+id/tvAlbumCount"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="0"
-                        android:textColor="@android:color/white"
-                        android:textStyle="bold" />
-                </LinearLayout>
             </LinearLayout>
 
-            <Button
-                android:id="@+id/btnSettings"
+            <TextView
                 android:layout_width="match_parent"
-                android:layout_height="48dp"
-                android:layout_marginBottom="8dp"
-                android:background="@drawable/bg_button_selected"
-                android:text="Configuración"
-                android:textAllCaps="false"
+                android:layout_height="wrap_content"
+                android:text="Canciones valoradas"
                 android:textColor="@android:color/white"
+                android:textSize="21sp"
                 android:textStyle="bold" />
 
-            <Button
-                android:id="@+id/btnPrivacy"
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rvRatedSongs"
                 android:layout_width="match_parent"
-                android:layout_height="48dp"
-                android:layout_marginBottom="8dp"
-                android:background="@drawable/bg_button_selected"
-                android:text="Privacidad"
-                android:textAllCaps="false"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:nestedScrollingEnabled="false" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="22dp"
+                android:text="Canciones comentadas"
                 android:textColor="@android:color/white"
+                android:textSize="21sp"
                 android:textStyle="bold" />
 
-            <Button
-                android:id="@+id/btnLogout"
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rvCommentedSongs"
                 android:layout_width="match_parent"
-                android:layout_height="48dp"
-                android:background="@drawable/bg_button_selected"
-                android:text="Cerrar sesión"
-                android:textAllCaps="false"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:nestedScrollingEnabled="false" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="22dp"
+                android:text="Álbumes valorados"
                 android:textColor="@android:color/white"
+                android:textSize="21sp"
                 android:textStyle="bold" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rvRatedAlbums"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:nestedScrollingEnabled="false" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="22dp"
+                android:text="Álbumes comentados"
+                android:textColor="@android:color/white"
+                android:textSize="21sp"
+                android:textStyle="bold" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rvCommentedAlbums"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:nestedScrollingEnabled="false" />
+
         </LinearLayout>
 
     </LinearLayout>
+
 </ScrollView>

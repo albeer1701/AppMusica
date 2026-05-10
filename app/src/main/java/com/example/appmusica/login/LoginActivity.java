@@ -1,8 +1,8 @@
 package com.example.appmusica.login;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.util.Patterns;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
@@ -12,135 +12,112 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.appmusica.MainActivity;
 import com.example.appmusica.R;
-import com.example.appmusica.api.AuthClient;
-import com.example.appmusica.api.AuthService;
-import com.example.appmusica.api.LoginRequest;
-import com.example.appmusica.api.SessionManager;
-import com.example.appmusica.api.SupabaseConfig;
-import com.example.appmusica.api.UserSession;
 
-import java.util.List;
-
-import retrofit2.Call;
-import retrofit2.Callback;
-import retrofit2.Response;
+import java.util.Map;
 
 public class LoginActivity extends AppCompatActivity {
 
-    private EditText etEmail;
-    private EditText etPassword;
+    private EditText etLoginEmail;
+    private EditText etLoginPassword;
     private Button btnLogin;
     private TextView tvGoRegister;
 
-    private SessionManager sessionManager;
+    private static final String USER_PREFS = "users_prefs";
+    private static final String SESSION_PREFS = "user_session";
+
+    private static final String ADMIN_USERNAME = "admin";
+    private static final String ADMIN_EMAIL = "adminyourtune@gmail.com";
+    private static final String ADMIN_PASSWORD = "Admin121992";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
 
-        sessionManager = new SessionManager(this);
-
-        if (sessionManager.isLoggedIn()) {
-            openMain();
-            return;
-        }
-
-        etEmail = findViewById(R.id.etLoginEmail);
-        etPassword = findViewById(R.id.etLoginPassword);
+        etLoginEmail = findViewById(R.id.etLoginEmail);
+        etLoginPassword = findViewById(R.id.etLoginPassword);
         btnLogin = findViewById(R.id.btnLogin);
         tvGoRegister = findViewById(R.id.tvGoRegister);
+
+        createDefaultAdminIfNeeded();
 
         btnLogin.setOnClickListener(v -> login());
 
         tvGoRegister.setOnClickListener(v -> {
             Intent intent = new Intent(LoginActivity.this, RegisterActivity.class);
             startActivity(intent);
+            finish();
         });
     }
 
+    private void createDefaultAdminIfNeeded() {
+        SharedPreferences usersPrefs = getSharedPreferences(USER_PREFS, MODE_PRIVATE);
+
+        usersPrefs.edit()
+                .putString("user_" + ADMIN_USERNAME, ADMIN_PASSWORD)
+                .putString("email_" + ADMIN_USERNAME, ADMIN_EMAIL)
+                .apply();
+    }
+
     private void login() {
-        String email = etEmail.getText().toString().trim();
-        String password = etPassword.getText().toString().trim();
+        String email = etLoginEmail.getText().toString().trim();
+        String password = etLoginPassword.getText().toString().trim();
 
         if (email.isEmpty()) {
-            etEmail.setError("Introduce el email");
-            return;
-        }
-
-        if (!Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
-            etEmail.setError("Email no válido");
+            Toast.makeText(this, "Introduce tu email", Toast.LENGTH_SHORT).show();
             return;
         }
 
         if (password.isEmpty()) {
-            etPassword.setError("Introduce la contraseña");
+            Toast.makeText(this, "Introduce tu contraseña", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        btnLogin.setEnabled(false);
+        String username = findUsernameByEmail(email);
 
-        AuthService service = AuthClient.getService();
+        if (username == null || username.isEmpty()) {
+            Toast.makeText(this, "Email o contraseña incorrectos", Toast.LENGTH_SHORT).show();
+            return;
+        }
 
-        service.login(
-                SupabaseConfig.API_KEY,
-                "Bearer " + SupabaseConfig.API_KEY,
-                new LoginRequest(email, password)
-        ).enqueue(new Callback<List<UserSession>>() {
-            @Override
-            public void onResponse(Call<List<UserSession>> call, Response<List<UserSession>> response) {
-                btnLogin.setEnabled(true);
+        SharedPreferences usersPrefs = getSharedPreferences(USER_PREFS, MODE_PRIVATE);
+        String savedPassword = usersPrefs.getString("user_" + username, "");
 
-                if (!response.isSuccessful()) {
-                    Toast.makeText(
-                            LoginActivity.this,
-                            "Error login BBDD. Código: " + response.code(),
-                            Toast.LENGTH_LONG
-                    ).show();
-                    return;
-                }
+        if (!password.equals(savedPassword)) {
+            Toast.makeText(this, "Email o contraseña incorrectos", Toast.LENGTH_SHORT).show();
+            return;
+        }
 
-                List<UserSession> users = response.body();
+        SharedPreferences sessionPrefs = getSharedPreferences(SESSION_PREFS, MODE_PRIVATE);
+        sessionPrefs.edit()
+                .putBoolean("is_logged", true)
+                .putString("username", username)
+                .putString("email", email)
+                .apply();
 
-                if (users == null || users.isEmpty()) {
-                    Toast.makeText(
-                            LoginActivity.this,
-                            "Email o contraseña incorrectos",
-                            Toast.LENGTH_LONG
-                    ).show();
-                    return;
-                }
+        Toast.makeText(this, "Sesión iniciada", Toast.LENGTH_SHORT).show();
 
-                UserSession user = users.get(0);
-
-                sessionManager.saveSession(
-                        user.id,
-                        user.email,
-                        user.nombreUsuario,
-                        user.rol
-                );
-
-                Toast.makeText(LoginActivity.this, "Sesión iniciada", Toast.LENGTH_SHORT).show();
-                openMain();
-            }
-
-            @Override
-            public void onFailure(Call<List<UserSession>> call, Throwable t) {
-                btnLogin.setEnabled(true);
-
-                Toast.makeText(
-                        LoginActivity.this,
-                        "Error conexión login: " + t.getMessage(),
-                        Toast.LENGTH_LONG
-                ).show();
-            }
-        });
-    }
-
-    private void openMain() {
         Intent intent = new Intent(LoginActivity.this, MainActivity.class);
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivity(intent);
         finish();
+    }
+
+    private String findUsernameByEmail(String email) {
+        SharedPreferences usersPrefs = getSharedPreferences(USER_PREFS, MODE_PRIVATE);
+        Map<String, ?> allUsers = usersPrefs.getAll();
+
+        for (Map.Entry<String, ?> entry : allUsers.entrySet()) {
+            String key = entry.getKey();
+
+            if (key.startsWith("email_")) {
+                Object value = entry.getValue();
+
+                if (value != null && email.equalsIgnoreCase(value.toString())) {
+                    return key.replace("email_", "");
+                }
+            }
+        }
+
+        return "";
     }
 }

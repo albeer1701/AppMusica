@@ -1,8 +1,8 @@
 package com.example.appmusica.login;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.util.Patterns;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
@@ -12,142 +12,84 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.appmusica.MainActivity;
 import com.example.appmusica.R;
-import com.example.appmusica.api.AuthClient;
-import com.example.appmusica.api.AuthService;
-import com.example.appmusica.api.LoginRequest;
-import com.example.appmusica.api.RegisterRequest;
-import com.example.appmusica.api.SessionManager;
-import com.example.appmusica.api.SupabaseConfig;
-import com.example.appmusica.api.UserSession;
-
-import java.util.List;
-
-import retrofit2.Call;
-import retrofit2.Callback;
-import retrofit2.Response;
 
 public class RegisterActivity extends AppCompatActivity {
 
-    private EditText etUsername;
-    private EditText etEmail;
-    private EditText etPassword;
+    private EditText etRegisterUsername;
+    private EditText etRegisterEmail;
+    private EditText etRegisterPassword;
     private Button btnRegister;
     private TextView tvGoLogin;
 
-    private SessionManager sessionManager;
-
-    private String pendingEmail;
-    private String pendingPassword;
+    private static final String USER_PREFS = "users_prefs";
+    private static final String SESSION_PREFS = "user_session";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_register);
 
-        sessionManager = new SessionManager(this);
-
-        etUsername = findViewById(R.id.etRegisterUsername);
-        etEmail = findViewById(R.id.etRegisterEmail);
-        etPassword = findViewById(R.id.etRegisterPassword);
+        etRegisterUsername = findViewById(R.id.etRegisterUsername);
+        etRegisterEmail = findViewById(R.id.etRegisterEmail);
+        etRegisterPassword = findViewById(R.id.etRegisterPassword);
         btnRegister = findViewById(R.id.btnRegister);
         tvGoLogin = findViewById(R.id.tvGoLogin);
 
-        btnRegister.setOnClickListener(v -> register());
-        tvGoLogin.setOnClickListener(v -> finish());
-    }
+        btnRegister.setOnClickListener(v -> createAccount());
 
-    private void register() {
-        String username = etUsername.getText().toString().trim();
-        pendingEmail = etEmail.getText().toString().trim();
-        pendingPassword = etPassword.getText().toString().trim();
-
-        if (username.isEmpty()) {
-            etUsername.setError("Introduce un nombre de usuario");
-            return;
-        }
-
-        if (pendingEmail.isEmpty()) {
-            etEmail.setError("Introduce el email");
-            return;
-        }
-
-        if (!Patterns.EMAIL_ADDRESS.matcher(pendingEmail).matches()) {
-            etEmail.setError("Email no válido");
-            return;
-        }
-
-        if (pendingPassword.isEmpty()) {
-            etPassword.setError("Introduce la contraseña");
-            return;
-        }
-
-        if (pendingPassword.length() < 6) {
-            etPassword.setError("Mínimo 6 caracteres");
-            return;
-        }
-
-        btnRegister.setEnabled(false);
-
-        AuthService service = AuthClient.getService();
-
-        service.register(
-                SupabaseConfig.API_KEY,
-                "Bearer " + SupabaseConfig.API_KEY,
-                new RegisterRequest(pendingEmail, pendingPassword, username)
-        ).enqueue(new Callback<List<UserSession>>() {
-            @Override
-            public void onResponse(Call<List<UserSession>> call, Response<List<UserSession>> response) {
-                btnRegister.setEnabled(true);
-
-                if (!response.isSuccessful()) {
-                    Toast.makeText(
-                            RegisterActivity.this,
-                            "Error registro BBDD. Código: " + response.code(),
-                            Toast.LENGTH_LONG
-                    ).show();
-                    return;
-                }
-
-                List<UserSession> users = response.body();
-
-                if (users == null || users.isEmpty()) {
-                    Toast.makeText(
-                            RegisterActivity.this,
-                            "No se pudo crear el usuario",
-                            Toast.LENGTH_LONG
-                    ).show();
-                    return;
-                }
-
-                UserSession user = users.get(0);
-
-                sessionManager.saveSession(
-                        user.id,
-                        user.email,
-                        user.nombreUsuario,
-                        user.rol
-                );
-
-                Toast.makeText(RegisterActivity.this, "Cuenta creada correctamente", Toast.LENGTH_SHORT).show();
-                openMain();
-            }
-
-            @Override
-            public void onFailure(Call<List<UserSession>> call, Throwable t) {
-                btnRegister.setEnabled(true);
-
-                Toast.makeText(
-                        RegisterActivity.this,
-                        "Error conexión registro: " + t.getMessage(),
-                        Toast.LENGTH_LONG
-                ).show();
-            }
+        tvGoLogin.setOnClickListener(v -> {
+            Intent intent = new Intent(RegisterActivity.this, LoginActivity.class);
+            startActivity(intent);
+            finish();
         });
     }
 
-    private void openMain() {
+    private void createAccount() {
+        String username = etRegisterUsername.getText().toString().trim();
+        String email = etRegisterEmail.getText().toString().trim();
+        String password = etRegisterPassword.getText().toString().trim();
+
+        if (username.isEmpty()) {
+            Toast.makeText(this, "Introduce un nombre de usuario", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (email.isEmpty()) {
+            Toast.makeText(this, "Introduce un email", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (!email.contains("@")) {
+            Toast.makeText(this, "Introduce un email válido", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (password.isEmpty()) {
+            Toast.makeText(this, "Introduce una contraseña", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        SharedPreferences usersPrefs = getSharedPreferences(USER_PREFS, MODE_PRIVATE);
+
+        if (usersPrefs.contains("user_" + username)) {
+            Toast.makeText(this, "Ese usuario ya existe", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        usersPrefs.edit()
+                .putString("user_" + username, password)
+                .putString("email_" + username, email)
+                .apply();
+
+        SharedPreferences sessionPrefs = getSharedPreferences(SESSION_PREFS, MODE_PRIVATE);
+        sessionPrefs.edit()
+                .putBoolean("is_logged", true)
+                .putString("username", username)
+                .apply();
+
+        Toast.makeText(this, "Cuenta creada correctamente", Toast.LENGTH_SHORT).show();
+
         Intent intent = new Intent(RegisterActivity.this, MainActivity.class);
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivity(intent);
         finish();
     }

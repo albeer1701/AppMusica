@@ -7,29 +7,42 @@ import java.util.List;
 public class SpotifyAlbum {
 
     @SerializedName("id")
-    public String id;
+    private String id;
 
     @SerializedName("name")
-    public String name;
+    private String name;
 
     @SerializedName("release_date")
-    public String releaseDate;
+    private String releaseDate;
 
     @SerializedName("artists")
-    public List<SpotifyArtist> artists;
+    private List<SpotifyArtist> artists;
 
     @SerializedName("images")
-    public List<SpotifyImage> images;
+    private List<SpotifyImage> images;
 
     @SerializedName("external_urls")
-    public SpotifyExternalUrls externalUrls;
+    private SpotifyExternalUrls externalUrls;
+
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name != null ? name : "Álbum";
+    }
+
+    public String getReleaseDate() {
+        return releaseDate != null ? releaseDate : "";
+    }
 
     public String getMainArtistName() {
         if (artists == null || artists.isEmpty() || artists.get(0) == null) {
-            return "";
+            return "Artista desconocido";
         }
 
-        return artists.get(0).getName() != null ? artists.get(0).getName() : "";
+        String artistName = artists.get(0).getName();
+        return artistName != null ? artistName : "Artista desconocido";
     }
 
     public String getImageUrl() {
@@ -37,7 +50,16 @@ public class SpotifyAlbum {
             return "";
         }
 
-        return images.get(0).getUrl() != null ? images.get(0).getUrl() : "";
+        String imageUrl = images.get(0).getUrl();
+        return imageUrl != null ? imageUrl : "";
+    }
+
+    public String getSpotifyUrl() {
+        if (externalUrls == null || externalUrls.getSpotify() == null) {
+            return "";
+        }
+
+        return externalUrls.getSpotify();
     }
 
     public int getYear() {

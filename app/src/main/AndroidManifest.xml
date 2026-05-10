@@ -14,6 +14,22 @@
         android:theme="@style/Theme.AppMusica">
 
         <activity
+            android:name=".login.RegisterActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".login.LoginActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".AlbumDetail"
+            android:exported="false" />
+
+        <activity
+            android:name=".PlaylistDetail"
+            android:exported="false" />
+
+        <activity
             android:name=".SongDetail"
             android:exported="false" />
 
@@ -23,7 +39,6 @@
 
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 

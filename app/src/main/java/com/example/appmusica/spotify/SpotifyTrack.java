@@ -55,4 +55,12 @@ public class SpotifyTrack {
 
         return album.getImageUrl();
     }
+
+    public String getSpotifyUrl() {
+        if (externalUrls == null || externalUrls.getSpotify() == null) {
+            return "";
+        }
+
+        return externalUrls.getSpotify();
+    }
 }
