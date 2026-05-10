@@ -6,16 +6,19 @@ import java.util.List;
 
 public class SpotifyAlbum {
 
+    @SerializedName("id")
     public String id;
+
+    @SerializedName("name")
     public String name;
 
     @SerializedName("release_date")
     public String releaseDate;
 
-    @SerializedName("total_tracks")
-    public int totalTracks;
-
+    @SerializedName("artists")
     public List<SpotifyArtist> artists;
+
+    @SerializedName("images")
     public List<SpotifyImage> images;
 
     @SerializedName("external_urls")
@@ -26,7 +29,7 @@ public class SpotifyAlbum {
             return "";
         }
 
-        return artists.get(0).name != null ? artists.get(0).name : "";
+        return artists.get(0).getName() != null ? artists.get(0).getName() : "";
     }
 
     public String getImageUrl() {
@@ -34,7 +37,7 @@ public class SpotifyAlbum {
             return "";
         }
 
-        return images.get(0).url != null ? images.get(0).url : "";
+        return images.get(0).getUrl() != null ? images.get(0).getUrl() : "";
     }
 
     public int getYear() {

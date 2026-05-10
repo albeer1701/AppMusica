@@ -5,5 +5,9 @@ import com.google.gson.annotations.SerializedName;
 public class SpotifyExternalUrls {
 
     @SerializedName("spotify")
-    public String spotifyUrl;
+    private String spotify;
+
+    public String getSpotify() {
+        return spotify;
+    }
 }

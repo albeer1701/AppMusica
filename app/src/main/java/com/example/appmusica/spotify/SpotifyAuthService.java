@@ -10,8 +10,9 @@ public interface SpotifyAuthService {
 
     @FormUrlEncoded
     @POST("api/token")
-    Call<SpotifyTokenResponse> getAccessToken(
+    Call<SpotifyTokenResponse> getToken(
             @Header("Authorization") String authorization,
             @Field("grant_type") String grantType
     );
+
 }

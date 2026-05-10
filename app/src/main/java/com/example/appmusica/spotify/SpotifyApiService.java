@@ -8,7 +8,7 @@ import retrofit2.http.Query;
 public interface SpotifyApiService {
 
     @GET("search")
-    Call<SpotifySearchResponse> searchMusic(
+    Call<SpotifySearchResponse> searchTracks(
             @Header("Authorization") String authorization,
             @Query("q") String query,
             @Query("type") String type,

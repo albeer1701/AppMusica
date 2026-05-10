@@ -1,29 +1,30 @@
 package com.example.appmusica;
 
+import android.content.Intent;
+import android.graphics.Typeface;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.util.Base64;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
-import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.activity.result.ActivityResultLauncher;
-import androidx.activity.result.contract.ActivityResultContracts;
-import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.example.appmusica.api.AlbumRemote;
-import com.example.appmusica.api.SongRemote;
-import com.example.appmusica.api.SupabaseClient;
-import com.example.appmusica.api.SupabaseConfig;
-import com.example.appmusica.api.SupabaseService;
+import com.example.appmusica.spotify.SpotifyApiService;
+import com.example.appmusica.spotify.SpotifyArtist;
+import com.example.appmusica.spotify.SpotifyAuthService;
+import com.example.appmusica.spotify.SpotifySearchResponse;
+import com.example.appmusica.spotify.SpotifyTokenResponse;
+import com.example.appmusica.spotify.SpotifyTrack;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,63 +32,45 @@ import java.util.List;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
+import retrofit2.Retrofit;
+import retrofit2.converter.gson.GsonConverterFactory;
 
 public class MainActivity extends AppCompatActivity {
 
-    private LinearLayout sectionHome, sectionSongs, sectionAlbums, sectionProfile;
-
     private ImageButton navHome;
-    private Button navSongs, navAlbums, navProfile;
+    private Button navSongs;
+    private Button navAlbums;
+    private Button navProfile;
+    private Button btnExploreMusic;
+    private Button btnMyLibrary;
 
-    private Button btnExploreMusic, btnMyLibrary;
-    private Button btnSettings, btnPrivacy, btnLogout;
+    private LinearLayout sectionHome;
+    private LinearLayout sectionSongs;
+    private LinearLayout sectionAlbums;
+    private LinearLayout sectionProfile;
 
-    private ImageView profileIcon;
+    private EditText etSearchSongs;
+    private EditText etSearchAlbums;
 
-    private EditText etSearchSongs, etSearchAlbums;
-    private TextView tvSongCount, tvAlbumCount;
+    private RecyclerView rvSongs;
+    private RecyclerView rvAlbums;
+    private RecyclerView rvHomeRecent;
 
-    private RecyclerView rvHomeRecent, rvSongs, rvAlbums;
+    private SpotifyApiService spotifyApiService;
+    private SpotifyAuthService spotifyAuthService;
 
-    private SongAdapter songAdapter;
-    private AlbumAdapter albumAdapter;
-    private SongAdapter homeRecentAdapter;
+    private String spotifyAccessToken = "";
 
-    private final List<Song> allSongs = new ArrayList<>();
-    private final List<Album> allAlbums = new ArrayList<>();
+    private SpotifySongAdapter songAdapter;
+    private final List<SpotifyTrack> songList = new ArrayList<>();
 
-    private ActivityResultLauncher<String> pickImageLauncher;
+    private static final String CLIENT_ID = "bc402c839df64040aca87380ef67c5a8";
+    private static final String CLIENT_SECRET = "eb6414a78146405aa9c05384567839cd";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-        pickImageLauncher = registerForActivityResult(
-                new ActivityResultContracts.GetContent(),
-                uri -> {
-                    if (uri != null && profileIcon != null) {
-                        profileIcon.setImageURI(uri);
-                    }
-                }
-        );
-
-        initViews();
-        setupRecyclerViews();
-        setupNavigation();
-        setupSearch();
-        setupProfileButtons();
-        showSection("home");
-
-        loadSongsFromSupabase();
-        loadAlbumsFromSupabase();
-    }
-
-    private void initViews() {
-        sectionHome = findViewById(R.id.sectionHome);
-        sectionSongs = findViewById(R.id.sectionSongs);
-        sectionAlbums = findViewById(R.id.sectionAlbums);
-        sectionProfile = findViewById(R.id.sectionProfile);
 
         navHome = findViewById(R.id.navHome);
         navSongs = findViewById(R.id.navSongs);
@@ -97,393 +80,324 @@ public class MainActivity extends AppCompatActivity {
         btnExploreMusic = findViewById(R.id.btnExploreMusic);
         btnMyLibrary = findViewById(R.id.btnMyLibrary);
 
-        profileIcon = findViewById(R.id.profileIcon);
+        sectionHome = findViewById(R.id.sectionHome);
+        sectionSongs = findViewById(R.id.sectionSongs);
+        sectionAlbums = findViewById(R.id.sectionAlbums);
+        sectionProfile = findViewById(R.id.sectionProfile);
 
         etSearchSongs = findViewById(R.id.etSearchSongs);
         etSearchAlbums = findViewById(R.id.etSearchAlbums);
 
-        rvHomeRecent = findViewById(R.id.rvHomeRecent);
         rvSongs = findViewById(R.id.rvSongs);
         rvAlbums = findViewById(R.id.rvAlbums);
+        rvHomeRecent = findViewById(R.id.rvHomeRecent);
 
-        tvSongCount = findViewById(R.id.tvSongCount);
-        tvAlbumCount = findViewById(R.id.tvAlbumCount);
-
-        btnSettings = findViewById(R.id.btnSettings);
-        btnPrivacy = findViewById(R.id.btnPrivacy);
-        btnLogout = findViewById(R.id.btnLogout);
+        setupRecyclerViews();
+        setupSpotifyRetrofit();
+        getSpotifyToken();
+        setupNavigation();
+        setupSearch();
     }
 
     private void setupRecyclerViews() {
-        if (rvHomeRecent != null) {
-            rvHomeRecent.setLayoutManager(new LinearLayoutManager(this));
-            homeRecentAdapter = new SongAdapter(new ArrayList<>(), this::showSongDialog);
-            rvHomeRecent.setAdapter(homeRecentAdapter);
-        }
+        rvSongs.setLayoutManager(new LinearLayoutManager(this));
 
-        if (rvSongs != null) {
-            rvSongs.setLayoutManager(new LinearLayoutManager(this));
-            songAdapter = new SongAdapter(new ArrayList<>(), this::showSongDialog);
-            rvSongs.setAdapter(songAdapter);
-        }
+        songAdapter = new SpotifySongAdapter(songList, song -> openSongDetail(song));
 
-        if (rvAlbums != null) {
-            rvAlbums.setLayoutManager(new LinearLayoutManager(this));
-            albumAdapter = new AlbumAdapter(new ArrayList<>());
-            rvAlbums.setAdapter(albumAdapter);
-        }
-    }
-
-    private void loadSongsFromSupabase() {
-        SupabaseService service = SupabaseClient.getService();
-
-        service.getCanciones(
-                SupabaseConfig.API_KEY,
-                SupabaseClient.getAuthorizationHeader()
-        ).enqueue(new Callback<List<SongRemote>>() {
-            @Override
-            public void onResponse(Call<List<SongRemote>> call, Response<List<SongRemote>> response) {
-                if (!response.isSuccessful()) {
-                    Toast.makeText(
-                            MainActivity.this,
-                            "Error canciones Supabase: " + response.code(),
-                            Toast.LENGTH_LONG
-                    ).show();
-                    return;
-                }
-
-                List<SongRemote> remoteSongs = response.body();
-
-                if (remoteSongs == null) {
-                    Toast.makeText(
-                            MainActivity.this,
-                            "Supabase devuelve canciones NULL",
-                            Toast.LENGTH_LONG
-                    ).show();
-                    return;
-                }
-
-                allSongs.clear();
-
-                for (SongRemote remote : remoteSongs) {
-                    Song song = new Song(
-                            safeText(remote.titulo),
-                            safeText(remote.artista),
-                            safeText(remote.album),
-                            safeText(remote.duracion),
-                            remote.anio,
-                            safeText(remote.genero),
-                            remote.notaMedia,
-                            safeText(remote.numeroValoraciones)
-                    );
-
-                    allSongs.add(song);
-                }
-
-                if (songAdapter != null) {
-                    songAdapter.updateList(new ArrayList<>(allSongs));
-                }
-
-                if (homeRecentAdapter != null) {
-                    List<Song> homeSongs = new ArrayList<>();
-
-                    for (int i = 0; i < allSongs.size() && i < 3; i++) {
-                        homeSongs.add(allSongs.get(i));
-                    }
-
-                    homeRecentAdapter.updateList(homeSongs);
-                }
-
-                updateProfileStats();
-
-                Toast.makeText(
-                        MainActivity.this,
-                        "Canciones desde Supabase: " + allSongs.size(),
-                        Toast.LENGTH_SHORT
-                ).show();
-            }
-
-            @Override
-            public void onFailure(Call<List<SongRemote>> call, Throwable t) {
-                Toast.makeText(
-                        MainActivity.this,
-                        "Fallo conexión canciones: " + t.getMessage(),
-                        Toast.LENGTH_LONG
-                ).show();
-            }
-        });
-    }
-
-    private void loadAlbumsFromSupabase() {
-        SupabaseService service = SupabaseClient.getService();
-
-        service.getAlbumes(
-                SupabaseConfig.API_KEY,
-                SupabaseClient.getAuthorizationHeader()
-        ).enqueue(new Callback<List<AlbumRemote>>() {
-            @Override
-            public void onResponse(Call<List<AlbumRemote>> call, Response<List<AlbumRemote>> response) {
-                if (!response.isSuccessful()) {
-                    Toast.makeText(
-                            MainActivity.this,
-                            "Error álbumes Supabase: " + response.code(),
-                            Toast.LENGTH_LONG
-                    ).show();
-                    return;
-                }
-
-                List<AlbumRemote> remoteAlbums = response.body();
-
-                if (remoteAlbums == null) {
-                    Toast.makeText(
-                            MainActivity.this,
-                            "Supabase devuelve álbumes NULL",
-                            Toast.LENGTH_LONG
-                    ).show();
-                    return;
-                }
-
-                allAlbums.clear();
-
-                for (AlbumRemote remote : remoteAlbums) {
-                    Album album = new Album(
-                            safeText(remote.titulo),
-                            safeText(remote.artista),
-                            remote.anio,
-                            remote.numeroCanciones,
-                            safeText(remote.genero),
-                            remote.notaMedia,
-                            safeText(remote.numeroValoraciones)
-                    );
-
-                    allAlbums.add(album);
-                }
-
-                if (albumAdapter != null) {
-                    albumAdapter.updateList(new ArrayList<>(allAlbums));
-                }
-
-                updateProfileStats();
-
-                Toast.makeText(
-                        MainActivity.this,
-                        "Álbumes desde Supabase: " + allAlbums.size(),
-                        Toast.LENGTH_SHORT
-                ).show();
-            }
-
-            @Override
-            public void onFailure(Call<List<AlbumRemote>> call, Throwable t) {
-                Toast.makeText(
-                        MainActivity.this,
-                        "Fallo conexión álbumes: " + t.getMessage(),
-                        Toast.LENGTH_LONG
-                ).show();
-            }
-        });
-    }
-
-    private String safeText(String text) {
-        return text != null ? text : "";
+        rvSongs.setAdapter(songAdapter);
     }
 
     private void setupNavigation() {
-        if (navHome != null) {
-            navHome.setOnClickListener(v -> showSection("home"));
-        }
+        navHome.setOnClickListener(v -> showSection(sectionHome));
 
-        if (navSongs != null) {
-            navSongs.setOnClickListener(v -> showSection("songs"));
-        }
+        navSongs.setOnClickListener(v -> {
+            showSection(sectionSongs);
 
-        if (navAlbums != null) {
-            navAlbums.setOnClickListener(v -> showSection("albums"));
-        }
+            if (spotifyAccessToken == null || spotifyAccessToken.isEmpty()) {
+                Toast.makeText(this, "Token de Spotify todavía no cargado", Toast.LENGTH_SHORT).show();
+            } else {
+                searchSpotifySongs("pop");
+            }
+        });
 
-        if (navProfile != null) {
-            navProfile.setOnClickListener(v -> showSection("profile"));
-        }
+        navAlbums.setOnClickListener(v -> showSection(sectionAlbums));
 
-        if (btnExploreMusic != null) {
-            btnExploreMusic.setOnClickListener(v -> showSection("songs"));
-        }
+        navProfile.setOnClickListener(v -> showSection(sectionProfile));
 
-        if (btnMyLibrary != null) {
-            btnMyLibrary.setOnClickListener(v -> showSection("albums"));
-        }
+        btnExploreMusic.setOnClickListener(v -> {
+            showSection(sectionSongs);
 
-        if (profileIcon != null) {
-            profileIcon.setOnClickListener(v -> showAccountSettingsDialog());
-        }
+            if (spotifyAccessToken == null || spotifyAccessToken.isEmpty()) {
+                Toast.makeText(this, "Token de Spotify todavía no cargado", Toast.LENGTH_SHORT).show();
+            } else {
+                searchSpotifySongs("rock");
+            }
+        });
+
+        btnMyLibrary.setOnClickListener(v ->
+                Toast.makeText(this, "Mi Biblioteca", Toast.LENGTH_SHORT).show()
+        );
     }
 
     private void setupSearch() {
-        if (etSearchSongs != null) {
-            etSearchSongs.addTextChangedListener(new TextWatcher() {
-                @Override
-                public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-                }
-
-                @Override
-                public void afterTextChanged(Editable s) {
-                }
-
-                @Override
-                public void onTextChanged(CharSequence s, int start, int before, int count) {
-                    filterSongs(s.toString());
-                }
-            });
-        }
-
-        if (etSearchAlbums != null) {
-            etSearchAlbums.addTextChangedListener(new TextWatcher() {
-                @Override
-                public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-                }
-
-                @Override
-                public void afterTextChanged(Editable s) {
-                }
-
-                @Override
-                public void onTextChanged(CharSequence s, int start, int before, int count) {
-                    filterAlbums(s.toString());
-                }
-            });
-        }
-    }
-
-    private void setupProfileButtons() {
-        if (btnSettings != null) {
-            btnSettings.setOnClickListener(v -> showAccountSettingsDialog());
-        }
-
-        if (btnPrivacy != null) {
-            btnPrivacy.setOnClickListener(v ->
-                    new AlertDialog.Builder(this)
-                            .setTitle("Privacidad")
-                            .setMessage("Opciones de privacidad próximamente.")
-                            .setPositiveButton("OK", null)
-                            .show()
-            );
-        }
-
-        if (btnLogout != null) {
-            btnLogout.setOnClickListener(v ->
-                    new AlertDialog.Builder(this)
-                            .setTitle("Cerrar sesión")
-                            .setMessage("¿Seguro que quieres cerrar sesión?")
-                            .setPositiveButton("Sí", (dialog, which) -> finish())
-                            .setNegativeButton("Cancelar", null)
-                            .show()
-            );
-        }
-    }
-
-    private void updateProfileStats() {
-        if (tvSongCount != null) {
-            tvSongCount.setText(String.valueOf(allSongs.size()));
-        }
-
-        if (tvAlbumCount != null) {
-            tvAlbumCount.setText(String.valueOf(allAlbums.size()));
-        }
-    }
-
-    private void filterSongs(String text) {
-        if (songAdapter == null) return;
-
-        List<Song> filtered = new ArrayList<>();
-        String query = text.toLowerCase().trim();
-
-        for (Song song : allSongs) {
-            if (song.getTitle().toLowerCase().contains(query) ||
-                    song.getArtist().toLowerCase().contains(query) ||
-                    song.getAlbum().toLowerCase().contains(query) ||
-                    song.getGenre().toLowerCase().contains(query)) {
-                filtered.add(song);
+        etSearchSongs.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
             }
-        }
 
-        songAdapter.updateList(filtered);
-    }
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                String query = s.toString().trim();
 
-    private void filterAlbums(String text) {
-        if (albumAdapter == null) return;
-
-        List<Album> filtered = new ArrayList<>();
-        String query = text.toLowerCase().trim();
-
-        for (Album album : allAlbums) {
-            if (album.getTitle().toLowerCase().contains(query) ||
-                    album.getArtist().toLowerCase().contains(query) ||
-                    album.getGenre().toLowerCase().contains(query)) {
-                filtered.add(album);
+                if (query.length() >= 2 && spotifyAccessToken != null && !spotifyAccessToken.isEmpty()) {
+                    searchSpotifySongs(query);
+                }
             }
-        }
 
-        albumAdapter.updateList(filtered);
+            @Override
+            public void afterTextChanged(Editable s) {
+            }
+        });
     }
 
-    private void showSection(String section) {
-        if (sectionHome != null) sectionHome.setVisibility(View.GONE);
-        if (sectionSongs != null) sectionSongs.setVisibility(View.GONE);
-        if (sectionAlbums != null) sectionAlbums.setVisibility(View.GONE);
-        if (sectionProfile != null) sectionProfile.setVisibility(View.GONE);
+    private void showSection(LinearLayout sectionToShow) {
+        sectionHome.setVisibility(View.GONE);
+        sectionSongs.setVisibility(View.GONE);
+        sectionAlbums.setVisibility(View.GONE);
+        sectionProfile.setVisibility(View.GONE);
 
-        switch (section) {
-            case "songs":
-                if (sectionSongs != null) {
-                    sectionSongs.setVisibility(View.VISIBLE);
-                }
-                break;
-
-            case "albums":
-                if (sectionAlbums != null) {
-                    sectionAlbums.setVisibility(View.VISIBLE);
-                }
-                break;
-
-            case "profile":
-                if (sectionProfile != null) {
-                    sectionProfile.setVisibility(View.VISIBLE);
-                }
-                break;
-
-            default:
-                if (sectionHome != null) {
-                    sectionHome.setVisibility(View.VISIBLE);
-                }
-                break;
-        }
+        sectionToShow.setVisibility(View.VISIBLE);
     }
 
-    private void showSongDialog(Song song) {
-        String message =
-                "Artista: " + song.getArtist() + "\n" +
-                        "Álbum: " + song.getAlbum() + "\n" +
-                        "Duración: " + song.getDuration() + "\n" +
-                        "Año: " + song.getYear() + "\n" +
-                        "Género: " + song.getGenre() + "\n" +
-                        "Valoración: " + song.getRating() + "/5";
+    private void setupSpotifyRetrofit() {
+        Retrofit authRetrofit = new Retrofit.Builder()
+                .baseUrl("https://accounts.spotify.com/")
+                .addConverterFactory(GsonConverterFactory.create())
+                .build();
 
-        new AlertDialog.Builder(this)
-                .setTitle(song.getTitle())
-                .setMessage(message)
-                .setPositiveButton("Cerrar", null)
-                .show();
+        spotifyAuthService = authRetrofit.create(SpotifyAuthService.class);
+
+        Retrofit apiRetrofit = new Retrofit.Builder()
+                .baseUrl("https://api.spotify.com/v1/")
+                .addConverterFactory(GsonConverterFactory.create())
+                .build();
+
+        spotifyApiService = apiRetrofit.create(SpotifyApiService.class);
     }
 
-    private void showAccountSettingsDialog() {
-        new AlertDialog.Builder(this)
-                .setTitle("Configuración de la cuenta")
-                .setMessage("Aquí podrás gestionar tu cuenta.")
-                .setPositiveButton("Cambiar foto", (dialog, which) -> {
-                    if (pickImageLauncher != null) {
-                        pickImageLauncher.launch("image/*");
+    private void getSpotifyToken() {
+        String credentials = CLIENT_ID + ":" + CLIENT_SECRET;
+
+        String basicAuth = "Basic " + Base64.encodeToString(
+                credentials.getBytes(),
+                Base64.NO_WRAP
+        );
+
+        spotifyAuthService.getToken(
+                basicAuth,
+                "client_credentials"
+        ).enqueue(new Callback<SpotifyTokenResponse>() {
+            @Override
+            public void onResponse(Call<SpotifyTokenResponse> call, Response<SpotifyTokenResponse> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    spotifyAccessToken = response.body().getAccessToken();
+
+                    Toast.makeText(
+                            MainActivity.this,
+                            "Spotify conectado",
+                            Toast.LENGTH_SHORT
+                    ).show();
+
+                } else {
+                    String errorText = "Sin detalle";
+
+                    try {
+                        if (response.errorBody() != null) {
+                            errorText = response.errorBody().string();
+                        }
+                    } catch (Exception e) {
+                        errorText = e.getMessage();
                     }
-                })
-                .setNegativeButton("Cerrar", null)
-                .show();
+
+                    Toast.makeText(
+                            MainActivity.this,
+                            "Error token Spotify " + response.code() + ": " + errorText,
+                            Toast.LENGTH_LONG
+                    ).show();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<SpotifyTokenResponse> call, Throwable t) {
+                Toast.makeText(
+                        MainActivity.this,
+                        "Fallo token Spotify: " + t.getMessage(),
+                        Toast.LENGTH_LONG
+                ).show();
+            }
+        });
+    }
+
+    private void searchSpotifySongs(String query) {
+        query = query.trim();
+
+        if (query.isEmpty()) {
+            Toast.makeText(this, "La búsqueda está vacía", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        spotifyApiService.searchTracks(
+                "Bearer " + spotifyAccessToken,
+                query,
+                "track",
+                10,
+                "ES"
+        ).enqueue(new Callback<SpotifySearchResponse>() {
+            @Override
+            public void onResponse(Call<SpotifySearchResponse> call, Response<SpotifySearchResponse> response) {
+                if (response.isSuccessful() && response.body() != null
+                        && response.body().getTracks() != null
+                        && response.body().getTracks().getItems() != null) {
+
+                    songList.clear();
+                    songList.addAll(response.body().getTracks().getItems());
+                    songAdapter.notifyDataSetChanged();
+
+                    Toast.makeText(
+                            MainActivity.this,
+                            "Canciones cargadas: " + songList.size(),
+                            Toast.LENGTH_SHORT
+                    ).show();
+
+                } else {
+                    String errorText = "Sin detalle";
+
+                    try {
+                        if (response.errorBody() != null) {
+                            errorText = response.errorBody().string();
+                        }
+                    } catch (Exception e) {
+                        errorText = e.getMessage();
+                    }
+
+                    Toast.makeText(
+                            MainActivity.this,
+                            "Error Spotify " + response.code() + ": " + errorText,
+                            Toast.LENGTH_LONG
+                    ).show();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<SpotifySearchResponse> call, Throwable t) {
+                Toast.makeText(
+                        MainActivity.this,
+                        "Fallo búsqueda Spotify: " + t.getMessage(),
+                        Toast.LENGTH_LONG
+                ).show();
+            }
+        });
+    }
+
+    private void openSongDetail(SpotifyTrack song) {
+        String artistName = "Artista desconocido";
+
+        if (song.getArtists() != null && !song.getArtists().isEmpty()) {
+            SpotifyArtist artist = song.getArtists().get(0);
+
+            if (artist != null && artist.getName() != null) {
+                artistName = artist.getName();
+            }
+        }
+
+        Intent intent = new Intent(MainActivity.this, SongDetail.class);
+        intent.putExtra("song_id", song.getId());
+        intent.putExtra("song_name", song.getName());
+        intent.putExtra("artist_name", artistName);
+
+        startActivity(intent);
+    }
+
+    private static class SpotifySongAdapter extends RecyclerView.Adapter<SpotifySongAdapter.SongViewHolder> {
+
+        private final List<SpotifyTrack> songs;
+        private final OnSongClickListener listener;
+
+        public SpotifySongAdapter(List<SpotifyTrack> songs, OnSongClickListener listener) {
+            this.songs = songs;
+            this.listener = listener;
+        }
+
+        @Override
+        public SongViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+            LinearLayout layout = new LinearLayout(parent.getContext());
+            layout.setOrientation(LinearLayout.VERTICAL);
+            layout.setPadding(24, 20, 24, 20);
+            layout.setBackgroundColor(0x223E6A8F);
+
+            RecyclerView.LayoutParams params = new RecyclerView.LayoutParams(
+                    RecyclerView.LayoutParams.MATCH_PARENT,
+                    RecyclerView.LayoutParams.WRAP_CONTENT
+            );
+
+            params.setMargins(0, 0, 0, 16);
+            layout.setLayoutParams(params);
+
+            TextView tvTitle = new TextView(parent.getContext());
+            tvTitle.setTextColor(0xFFFFFFFF);
+            tvTitle.setTextSize(17);
+            tvTitle.setTypeface(null, Typeface.BOLD);
+
+            TextView tvArtist = new TextView(parent.getContext());
+            tvArtist.setTextColor(0xFFA7B6C2);
+            tvArtist.setTextSize(14);
+
+            layout.addView(tvTitle);
+            layout.addView(tvArtist);
+
+            return new SongViewHolder(layout, tvTitle, tvArtist);
+        }
+
+        @Override
+        public void onBindViewHolder(SongViewHolder holder, int position) {
+            SpotifyTrack song = songs.get(position);
+
+            holder.tvTitle.setText(song.getName());
+
+            String artistName = "Artista desconocido";
+
+            if (song.getArtists() != null && !song.getArtists().isEmpty()) {
+                SpotifyArtist artist = song.getArtists().get(0);
+
+                if (artist != null && artist.getName() != null) {
+                    artistName = artist.getName();
+                }
+            }
+
+            holder.tvArtist.setText(artistName);
+
+            holder.itemView.setOnClickListener(v -> listener.onSongClick(song));
+        }
+
+        @Override
+        public int getItemCount() {
+            return songs.size();
+        }
+
+        static class SongViewHolder extends RecyclerView.ViewHolder {
+
+            TextView tvTitle;
+            TextView tvArtist;
+
+            public SongViewHolder(View itemView, TextView tvTitle, TextView tvArtist) {
+                super(itemView);
+                this.tvTitle = tvTitle;
+                this.tvArtist = tvArtist;
+            }
+        }
+
+        interface OnSongClickListener {
+            void onSongClick(SpotifyTrack song);
+        }
     }
 }

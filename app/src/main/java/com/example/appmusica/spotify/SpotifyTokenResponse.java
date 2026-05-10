@@ -5,11 +5,23 @@ import com.google.gson.annotations.SerializedName;
 public class SpotifyTokenResponse {
 
     @SerializedName("access_token")
-    public String accessToken;
+    private String accessToken;
 
     @SerializedName("token_type")
-    public String tokenType;
+    private String tokenType;
 
     @SerializedName("expires_in")
-    public int expiresIn;
+    private int expiresIn;
+
+    public String getAccessToken() {
+        return accessToken;
+    }
+
+    public String getTokenType() {
+        return tokenType;
+    }
+
+    public int getExpiresIn() {
+        return expiresIn;
+    }
 }

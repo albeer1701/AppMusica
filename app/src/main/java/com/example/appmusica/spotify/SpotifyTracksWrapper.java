@@ -1,7 +1,15 @@
 package com.example.appmusica.spotify;
 
+import com.google.gson.annotations.SerializedName;
+
 import java.util.List;
 
 public class SpotifyTracksWrapper {
-    public List<SpotifyTrack> items;
+
+    @SerializedName("items")
+    private List<SpotifyTrack> items;
+
+    public List<SpotifyTrack> getItems() {
+        return items;
+    }
 }
