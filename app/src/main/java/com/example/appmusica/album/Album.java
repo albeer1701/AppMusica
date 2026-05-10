@@ -1,4 +1,4 @@
-package com.example.appmusica;
+package com.example.appmusica.album;
 
 public class Album {
     private final String title;

@@ -22,7 +22,7 @@
             android:exported="false" />
 
         <activity
-            android:name=".AlbumDetail"
+            android:name=".album.AlbumDetail"
             android:exported="false" />
 
         <activity
@@ -30,7 +30,7 @@
             android:exported="false" />
 
         <activity
-            android:name=".SongDetail"
+            android:name=".song.SongDetail"
             android:exported="false" />
 
         <activity

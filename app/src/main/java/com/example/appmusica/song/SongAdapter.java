@@ -1,4 +1,4 @@
-package com.example.appmusica;
+package com.example.appmusica.song;
 
 import android.graphics.Color;
 import android.view.LayoutInflater;
@@ -8,6 +8,8 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
+
+import com.example.appmusica.R;
 
 import java.util.ArrayList;
 import java.util.List;

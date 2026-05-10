@@ -26,6 +26,8 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
+import com.example.appmusica.album.AlbumDetail;
+import com.example.appmusica.song.SongDetail;
 import com.example.appmusica.spotify.SpotifyAlbum;
 import com.example.appmusica.spotify.SpotifyAlbumSearchResponse;
 import com.example.appmusica.spotify.SpotifyApiService;

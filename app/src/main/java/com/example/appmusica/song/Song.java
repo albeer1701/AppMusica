@@ -1,4 +1,4 @@
-package com.example.appmusica;
+package com.example.appmusica.song;
 
 public class Song {
     private final String title;
