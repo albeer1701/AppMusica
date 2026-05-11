@@ -1,4 +1,4 @@
-package com.example.appmusica;
+package com.example.appmusica.playlist;
 
 import android.content.Intent;
 import android.graphics.Typeface;
@@ -15,6 +15,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
+import com.example.appmusica.R;
 import com.example.appmusica.song.SongDetail;
 import com.example.appmusica.spotify.SpotifyApiService;
 import com.example.appmusica.spotify.SpotifyArtist;
