@@ -1,4 +1,4 @@
-package com.example.appmusica.api;
+package com.example.appmusica.supabase;
 
 public class SupabaseConfig {
     public static final String PROJECT_URL = "https://beuonvegdpcttgdpznao.supabase.co/";

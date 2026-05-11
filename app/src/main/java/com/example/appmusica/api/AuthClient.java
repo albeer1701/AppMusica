@@ -1,5 +1,7 @@
 package com.example.appmusica.api;
 
+import com.example.appmusica.supabase.SupabaseConfig;
+
 import okhttp3.OkHttpClient;
 import okhttp3.logging.HttpLoggingInterceptor;
 import retrofit2.Retrofit;

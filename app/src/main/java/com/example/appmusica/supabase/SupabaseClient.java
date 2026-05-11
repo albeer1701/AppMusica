@@ -1,4 +1,4 @@
-package com.example.appmusica.api;
+package com.example.appmusica.supabase;
 
 import okhttp3.OkHttpClient;
 import okhttp3.logging.HttpLoggingInterceptor;

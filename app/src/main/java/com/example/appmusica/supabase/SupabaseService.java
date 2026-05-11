@@ -1,4 +1,7 @@
-package com.example.appmusica.api;
+package com.example.appmusica.supabase;
+
+import com.example.appmusica.api.AlbumRemote;
+import com.example.appmusica.api.SongRemote;
 
 import java.util.List;
 
