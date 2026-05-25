@@ -43,6 +43,7 @@ import com.example.appmusica.spotify.SpotifyTrack;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 import retrofit2.Call;
@@ -64,11 +65,6 @@ public class MainActivity extends AppCompatActivity {
 
     private Button btnSortBest;
     private Button btnSortWorst;
-
-    private LinearLayout sectionHome;
-    private LinearLayout sectionSongs;
-    private LinearLayout sectionAlbums;
-    private LinearLayout sectionProfile;
 
     private EditText etSearchSongs;
     private EditText etSearchAlbums;
@@ -121,44 +117,215 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        setupProfileImagePicker();
+        setupSpotifyRetrofit();
+
+        showHomeScreen();
+
+        getSpotifyToken();
+    }
+
+    private void showHomeScreen() {
         setContentView(R.layout.activity_main);
 
         navHome = findViewById(R.id.navHome);
         navSongs = findViewById(R.id.navSongs);
         navAlbums = findViewById(R.id.navAlbums);
         navProfile = findViewById(R.id.navProfile);
-
         profileIcon = findViewById(R.id.profileIcon);
 
         btnExploreMusic = findViewById(R.id.btnExploreMusic);
         btnMyLibrary = findViewById(R.id.btnMyLibrary);
 
+        rvHomeRecent = findViewById(R.id.rvHomeRecent);
+
+        setupNavigationButtons();
+        loadSavedProfileImage();
+
+        rvHomeRecent.setLayoutManager(new LinearLayoutManager(this));
+        rvHomeRecent.setNestedScrollingEnabled(false);
+
+        homePlaylistAdapter = new HomePlaylistAdapter(homePlaylistList, playlist -> openPlaylistDetail(playlist));
+        rvHomeRecent.setAdapter(homePlaylistAdapter);
+
+        btnExploreMusic.setOnClickListener(v -> {
+            showSongsScreen();
+
+            if (spotifyAccessToken != null && !spotifyAccessToken.isEmpty()) {
+                searchSpotifySongs("rock");
+            }
+        });
+
+        btnMyLibrary.setOnClickListener(v -> showProfileScreen());
+
+        if (spotifyAccessToken != null && !spotifyAccessToken.isEmpty()) {
+            loadHomePlaylists();
+        }
+    }
+
+    private void showSongsScreen() {
+        setContentView(R.layout.activity_songs);
+
+        navHome = findViewById(R.id.navHome);
+        navSongs = findViewById(R.id.navSongs);
+        navAlbums = findViewById(R.id.navAlbums);
+        navProfile = findViewById(R.id.navProfile);
+        profileIcon = findViewById(R.id.profileIcon);
+
+        etSearchSongs = findViewById(R.id.etSearchSongs);
+        rvSongs = findViewById(R.id.rvSongs);
+
+        setupNavigationButtons();
+        loadSavedProfileImage();
+
+        rvSongs.setLayoutManager(new LinearLayoutManager(this));
+        rvSongs.setNestedScrollingEnabled(true);
+
+        songAdapter = new SpotifySongAdapter(songList, song -> openSongDetail(song));
+        rvSongs.setAdapter(songAdapter);
+
+        setupSongSearch();
+
+        if (spotifyAccessToken == null || spotifyAccessToken.isEmpty()) {
+            Toast.makeText(this, "Token de Spotify todavía no cargado", Toast.LENGTH_SHORT).show();
+        } else {
+            searchSpotifySongs("pop");
+        }
+    }
+
+    private void showAlbumsScreen() {
+        setContentView(R.layout.activity_albums);
+
+        navHome = findViewById(R.id.navHome);
+        navSongs = findViewById(R.id.navSongs);
+        navAlbums = findViewById(R.id.navAlbums);
+        navProfile = findViewById(R.id.navProfile);
+        profileIcon = findViewById(R.id.profileIcon);
+
+        etSearchAlbums = findViewById(R.id.etSearchAlbums);
+        rvAlbums = findViewById(R.id.rvAlbums);
+
+        setupNavigationButtons();
+        loadSavedProfileImage();
+
+        rvAlbums.setLayoutManager(new LinearLayoutManager(this));
+        rvAlbums.setNestedScrollingEnabled(true);
+
+        albumAdapter = new SpotifyAlbumAdapter(albumList, album -> openAlbumDetail(album));
+        rvAlbums.setAdapter(albumAdapter);
+
+        setupAlbumSearch();
+
+        if (spotifyAccessToken == null || spotifyAccessToken.isEmpty()) {
+            Toast.makeText(this, "Token de Spotify todavía no cargado", Toast.LENGTH_SHORT).show();
+        } else {
+            searchSpotifyAlbums("popular albums");
+        }
+    }
+
+    private void showProfileScreen() {
+        setContentView(R.layout.activity_profile);
+
+        navHome = findViewById(R.id.navHome);
+        navSongs = findViewById(R.id.navSongs);
+        navAlbums = findViewById(R.id.navAlbums);
+        navProfile = findViewById(R.id.navProfile);
+        profileIcon = findViewById(R.id.profileIcon);
+
         btnSortBest = findViewById(R.id.btnSortBest);
         btnSortWorst = findViewById(R.id.btnSortWorst);
 
-        sectionHome = findViewById(R.id.sectionHome);
-        sectionSongs = findViewById(R.id.sectionSongs);
-        sectionAlbums = findViewById(R.id.sectionAlbums);
-        sectionProfile = findViewById(R.id.sectionProfile);
-
-        etSearchSongs = findViewById(R.id.etSearchSongs);
-        etSearchAlbums = findViewById(R.id.etSearchAlbums);
-
-        rvSongs = findViewById(R.id.rvSongs);
-        rvAlbums = findViewById(R.id.rvAlbums);
-        rvHomeRecent = findViewById(R.id.rvHomeRecent);
         rvRatedSongs = findViewById(R.id.rvRatedSongs);
         rvCommentedSongs = findViewById(R.id.rvCommentedSongs);
         rvRatedAlbums = findViewById(R.id.rvRatedAlbums);
         rvCommentedAlbums = findViewById(R.id.rvCommentedAlbums);
 
-        setupProfileImagePicker();
-        setupRecyclerViews();
-        setupSpotifyRetrofit();
-        getSpotifyToken();
-        setupNavigation();
-        setupSearch();
+        setupNavigationButtons();
         loadSavedProfileImage();
+
+        rvRatedSongs.setLayoutManager(new LinearLayoutManager(this));
+        rvRatedSongs.setNestedScrollingEnabled(false);
+        ratedSongsAdapter = new ProfileItemAdapter(ratedSongsList, item -> openProfileItem(item));
+        rvRatedSongs.setAdapter(ratedSongsAdapter);
+
+        rvCommentedSongs.setLayoutManager(new LinearLayoutManager(this));
+        rvCommentedSongs.setNestedScrollingEnabled(false);
+        commentedSongsAdapter = new ProfileItemAdapter(commentedSongsList, item -> openProfileItem(item));
+        rvCommentedSongs.setAdapter(commentedSongsAdapter);
+
+        rvRatedAlbums.setLayoutManager(new LinearLayoutManager(this));
+        rvRatedAlbums.setNestedScrollingEnabled(false);
+        ratedAlbumsAdapter = new ProfileItemAdapter(ratedAlbumsList, item -> openProfileItem(item));
+        rvRatedAlbums.setAdapter(ratedAlbumsAdapter);
+
+        rvCommentedAlbums.setLayoutManager(new LinearLayoutManager(this));
+        rvCommentedAlbums.setNestedScrollingEnabled(false);
+        commentedAlbumsAdapter = new ProfileItemAdapter(commentedAlbumsList, item -> openProfileItem(item));
+        rvCommentedAlbums.setAdapter(commentedAlbumsAdapter);
+
+        btnSortBest.setOnClickListener(v -> {
+            sortBestFirst = true;
+            loadProfileData();
+        });
+
+        btnSortWorst.setOnClickListener(v -> {
+            sortBestFirst = false;
+            loadProfileData();
+        });
+
+        loadProfileData();
+    }
+
+    private void setupNavigationButtons() {
+        navHome.setOnClickListener(v -> showHomeScreen());
+        navSongs.setOnClickListener(v -> showSongsScreen());
+        navAlbums.setOnClickListener(v -> showAlbumsScreen());
+        navProfile.setOnClickListener(v -> showProfileScreen());
+
+        profileIcon.setOnClickListener(v -> showAccountMenu());
+    }
+
+    private void setupSongSearch() {
+        etSearchSongs.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                String query = s.toString().trim();
+
+                if (query.length() >= 2 && spotifyAccessToken != null && !spotifyAccessToken.isEmpty()) {
+                    searchSpotifySongs(query);
+                }
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+            }
+        });
+    }
+
+    private void setupAlbumSearch() {
+        etSearchAlbums.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                String query = s.toString().trim();
+
+                if (query.length() >= 2 && spotifyAccessToken != null && !spotifyAccessToken.isEmpty()) {
+                    searchSpotifyAlbums(query);
+                }
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+            }
+        });
     }
 
     private String getCurrentUsername() {
@@ -198,7 +365,10 @@ public class MainActivity extends AppCompatActivity {
                                 .putString(PROFILE_IMAGE_URI, uri.toString())
                                 .apply();
 
-                        profileIcon.setImageURI(uri);
+                        if (profileIcon != null) {
+                            profileIcon.setImageURI(uri);
+                        }
+
                         Toast.makeText(this, "Foto de perfil actualizada", Toast.LENGTH_SHORT).show();
                     }
                 }
@@ -206,6 +376,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void loadSavedProfileImage() {
+        if (profileIcon == null) {
+            return;
+        }
+
         SharedPreferences prefs = getSharedPreferences(getProfileImagePrefsName(), MODE_PRIVATE);
         String savedUri = prefs.getString(PROFILE_IMAGE_URI, "");
 
@@ -214,91 +388,6 @@ public class MainActivity extends AppCompatActivity {
         } else {
             profileIcon.setImageResource(R.drawable.logo);
         }
-    }
-
-    private void setupRecyclerViews() {
-        rvSongs.setLayoutManager(new LinearLayoutManager(this));
-        songAdapter = new SpotifySongAdapter(songList, song -> openSongDetail(song));
-        rvSongs.setAdapter(songAdapter);
-
-        rvAlbums.setLayoutManager(new LinearLayoutManager(this));
-        albumAdapter = new SpotifyAlbumAdapter(albumList, album -> openAlbumDetail(album));
-        rvAlbums.setAdapter(albumAdapter);
-
-        rvHomeRecent.setLayoutManager(new LinearLayoutManager(this));
-        homePlaylistAdapter = new HomePlaylistAdapter(homePlaylistList, playlist -> openPlaylistDetail(playlist));
-        rvHomeRecent.setAdapter(homePlaylistAdapter);
-
-        rvRatedSongs.setLayoutManager(new LinearLayoutManager(this));
-        ratedSongsAdapter = new ProfileItemAdapter(ratedSongsList, item -> openProfileItem(item));
-        rvRatedSongs.setAdapter(ratedSongsAdapter);
-
-        rvCommentedSongs.setLayoutManager(new LinearLayoutManager(this));
-        commentedSongsAdapter = new ProfileItemAdapter(commentedSongsList, item -> openProfileItem(item));
-        rvCommentedSongs.setAdapter(commentedSongsAdapter);
-
-        rvRatedAlbums.setLayoutManager(new LinearLayoutManager(this));
-        ratedAlbumsAdapter = new ProfileItemAdapter(ratedAlbumsList, item -> openProfileItem(item));
-        rvRatedAlbums.setAdapter(ratedAlbumsAdapter);
-
-        rvCommentedAlbums.setLayoutManager(new LinearLayoutManager(this));
-        commentedAlbumsAdapter = new ProfileItemAdapter(commentedAlbumsList, item -> openProfileItem(item));
-        rvCommentedAlbums.setAdapter(commentedAlbumsAdapter);
-    }
-
-    private void setupNavigation() {
-        navHome.setOnClickListener(v -> showSection(sectionHome));
-
-        navSongs.setOnClickListener(v -> {
-            showSection(sectionSongs);
-
-            if (spotifyAccessToken == null || spotifyAccessToken.isEmpty()) {
-                Toast.makeText(this, "Token de Spotify todavía no cargado", Toast.LENGTH_SHORT).show();
-            } else {
-                searchSpotifySongs("pop");
-            }
-        });
-
-        navAlbums.setOnClickListener(v -> {
-            showSection(sectionAlbums);
-
-            if (spotifyAccessToken == null || spotifyAccessToken.isEmpty()) {
-                Toast.makeText(this, "Token de Spotify todavía no cargado", Toast.LENGTH_SHORT).show();
-            } else {
-                searchSpotifyAlbums("popular albums");
-            }
-        });
-
-        navProfile.setOnClickListener(v -> {
-            showSection(sectionProfile);
-            loadProfileData();
-        });
-
-        profileIcon.setOnClickListener(v -> showAccountMenu());
-
-        btnSortBest.setOnClickListener(v -> {
-            sortBestFirst = true;
-            loadProfileData();
-        });
-
-        btnSortWorst.setOnClickListener(v -> {
-            sortBestFirst = false;
-            loadProfileData();
-        });
-
-        btnExploreMusic.setOnClickListener(v -> {
-            showSection(sectionSongs);
-
-            if (spotifyAccessToken == null || spotifyAccessToken.isEmpty()) {
-                Toast.makeText(this, "Token de Spotify todavía no cargado", Toast.LENGTH_SHORT).show();
-            } else {
-                searchSpotifySongs("rock");
-            }
-        });
-
-        btnMyLibrary.setOnClickListener(v ->
-                Toast.makeText(this, "Mi Biblioteca", Toast.LENGTH_SHORT).show()
-        );
     }
 
     private void showAccountMenu() {
@@ -384,55 +473,6 @@ public class MainActivity extends AppCompatActivity {
         finish();
     }
 
-    private void setupSearch() {
-        etSearchSongs.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-            }
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-                String query = s.toString().trim();
-
-                if (query.length() >= 2 && spotifyAccessToken != null && !spotifyAccessToken.isEmpty()) {
-                    searchSpotifySongs(query);
-                }
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {
-            }
-        });
-
-        etSearchAlbums.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-            }
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-                String query = s.toString().trim();
-
-                if (query.length() >= 2 && spotifyAccessToken != null && !spotifyAccessToken.isEmpty()) {
-                    searchSpotifyAlbums(query);
-                }
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {
-            }
-        });
-    }
-
-    private void showSection(LinearLayout sectionToShow) {
-        sectionHome.setVisibility(View.GONE);
-        sectionSongs.setVisibility(View.GONE);
-        sectionAlbums.setVisibility(View.GONE);
-        sectionProfile.setVisibility(View.GONE);
-
-        sectionToShow.setVisibility(View.VISIBLE);
-    }
-
     private void setupSpotifyRetrofit() {
         Retrofit authRetrofit = new Retrofit.Builder()
                 .baseUrl("https://accounts.spotify.com/")
@@ -500,7 +540,10 @@ public class MainActivity extends AppCompatActivity {
 
                     songList.clear();
                     songList.addAll(response.body().getTracks().getItems());
-                    songAdapter.notifyDataSetChanged();
+
+                    if (songAdapter != null) {
+                        songAdapter.notifyDataSetChanged();
+                    }
                 } else {
                     showSpotifySearchError(response);
                 }
@@ -541,7 +584,9 @@ public class MainActivity extends AppCompatActivity {
                         }
                     }
 
-                    albumAdapter.notifyDataSetChanged();
+                    if (albumAdapter != null) {
+                        albumAdapter.notifyDataSetChanged();
+                    }
                 } else {
                     Toast.makeText(MainActivity.this, "Error álbumes Spotify: " + response.code(), Toast.LENGTH_LONG).show();
                 }
@@ -560,7 +605,10 @@ public class MainActivity extends AppCompatActivity {
         }
 
         homePlaylistList.clear();
-        homePlaylistAdapter.notifyDataSetChanged();
+
+        if (homePlaylistAdapter != null) {
+            homePlaylistAdapter.notifyDataSetChanged();
+        }
 
         loadHomePlaylistsByQuery("top hits");
         loadHomePlaylistsByQuery("popular songs");
@@ -592,7 +640,9 @@ public class MainActivity extends AppCompatActivity {
                         }
                     }
 
-                    homePlaylistAdapter.notifyDataSetChanged();
+                    if (homePlaylistAdapter != null) {
+                        homePlaylistAdapter.notifyDataSetChanged();
+                    }
                 }
             }
 
@@ -673,8 +723,13 @@ public class MainActivity extends AppCompatActivity {
         sortProfileList(ratedSongsList);
         sortProfileList(commentedSongsList);
 
-        ratedSongsAdapter.notifyDataSetChanged();
-        commentedSongsAdapter.notifyDataSetChanged();
+        if (ratedSongsAdapter != null) {
+            ratedSongsAdapter.notifyDataSetChanged();
+        }
+
+        if (commentedSongsAdapter != null) {
+            commentedSongsAdapter.notifyDataSetChanged();
+        }
     }
 
     private void loadProfileAlbums() {
@@ -728,8 +783,13 @@ public class MainActivity extends AppCompatActivity {
         sortProfileList(ratedAlbumsList);
         sortProfileList(commentedAlbumsList);
 
-        ratedAlbumsAdapter.notifyDataSetChanged();
-        commentedAlbumsAdapter.notifyDataSetChanged();
+        if (ratedAlbumsAdapter != null) {
+            ratedAlbumsAdapter.notifyDataSetChanged();
+        }
+
+        if (commentedAlbumsAdapter != null) {
+            commentedAlbumsAdapter.notifyDataSetChanged();
+        }
     }
 
     private void sortProfileList(List<ProfileItem> list) {
@@ -824,6 +884,24 @@ public class MainActivity extends AppCompatActivity {
                 .replace(" ", "_");
     }
 
+    private static String formatRating(float value) {
+        if (value == (int) value) {
+            return String.valueOf((int) value);
+        }
+
+        return String.format(Locale.getDefault(), "%.1f", value);
+    }
+
+    private static int getRatingColor(float value) {
+        if (value <= 2.4f) {
+            return 0xFFFF4D4D;
+        } else if (value <= 3.4f) {
+            return 0xFFFFD700;
+        } else {
+            return 0xFF66CC66;
+        }
+    }
+
     private static class ProfileItem {
 
         String type;
@@ -859,48 +937,67 @@ public class MainActivity extends AppCompatActivity {
         public ProfileItemViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
             LinearLayout layout = new LinearLayout(parent.getContext());
             layout.setOrientation(LinearLayout.HORIZONTAL);
-            layout.setPadding(8, 8, 8, 8);
+            layout.setGravity(android.view.Gravity.CENTER_VERTICAL);
+            layout.setPadding(14, 12, 14, 12);
             layout.setBackgroundResource(R.drawable.bg_playlist_card);
 
             RecyclerView.LayoutParams params = new RecyclerView.LayoutParams(
                     RecyclerView.LayoutParams.MATCH_PARENT,
                     RecyclerView.LayoutParams.WRAP_CONTENT
             );
-
             params.setMargins(0, 0, 0, 10);
             layout.setLayoutParams(params);
 
             ImageView image = new ImageView(parent.getContext());
-            image.setLayoutParams(new LinearLayout.LayoutParams(120, 120));
+            image.setLayoutParams(new LinearLayout.LayoutParams(88, 88));
             image.setScaleType(ImageView.ScaleType.CENTER_CROP);
+            image.setBackground(null);
+            image.setPadding(0, 0, 0, 0);
 
             LinearLayout textContainer = new LinearLayout(parent.getContext());
             textContainer.setOrientation(LinearLayout.VERTICAL);
-            textContainer.setPadding(14, 0, 0, 0);
-            textContainer.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
+            textContainer.setPadding(14, 0, 8, 0);
+            textContainer.setLayoutParams(new LinearLayout.LayoutParams(
+                    0,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    1
+            ));
 
             TextView title = new TextView(parent.getContext());
             title.setTextColor(0xFFFFFFFF);
-            title.setTextSize(16);
+            title.setTextSize(12);
             title.setTypeface(null, Typeface.BOLD);
             title.setMaxLines(2);
 
             TextView artist = new TextView(parent.getContext());
             artist.setTextColor(0xFFA7B6C2);
-            artist.setTextSize(14);
+            artist.setTextSize(12);
             artist.setMaxLines(1);
-
-            TextView rating = new TextView(parent.getContext());
-            rating.setTextColor(0xFFFFFFFF);
-            rating.setTextSize(14);
-            rating.setTypeface(null, Typeface.BOLD);
 
             textContainer.addView(title);
             textContainer.addView(artist);
-            textContainer.addView(rating);
+
+            LinearLayout ratingContainer = new LinearLayout(parent.getContext());
+            ratingContainer.setOrientation(LinearLayout.VERTICAL);
+            ratingContainer.setGravity(android.view.Gravity.CENTER_VERTICAL | android.view.Gravity.END);
+            ratingContainer.setPadding(8, 0, 0, 0);
+            ratingContainer.setLayoutParams(new LinearLayout.LayoutParams(
+                    120,
+                    LinearLayout.LayoutParams.MATCH_PARENT
+            ));
+
+            TextView rating = new TextView(parent.getContext());
+            rating.setTextColor(0xFFFFFFFF);
+            rating.setTextSize(12);
+            rating.setTypeface(null, Typeface.BOLD);
+            rating.setGravity(android.view.Gravity.END | android.view.Gravity.CENTER_VERTICAL);
+            rating.setMaxLines(1);
+
+            ratingContainer.addView(rating);
 
             layout.addView(image);
             layout.addView(textContainer);
+            layout.addView(ratingContainer);
 
             return new ProfileItemViewHolder(layout, image, title, artist, rating);
         }
@@ -911,7 +1008,9 @@ public class MainActivity extends AppCompatActivity {
 
             holder.title.setText(item.name);
             holder.artist.setText(item.artist);
-            holder.rating.setText("Media: " + String.format("%.1f", item.average) + "/5 (" + item.count + ")");
+
+            holder.rating.setText(formatRating(item.average) + "/5");
+            holder.rating.setTextColor(getRatingColor(item.average));
 
             if (item.imageUrl != null && !item.imageUrl.isEmpty()) {
                 Glide.with(holder.image.getContext())
@@ -965,35 +1064,41 @@ public class MainActivity extends AppCompatActivity {
         public SongViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
             LinearLayout layout = new LinearLayout(parent.getContext());
             layout.setOrientation(LinearLayout.HORIZONTAL);
-            layout.setPadding(8, 8, 8, 8);
+            layout.setGravity(android.view.Gravity.CENTER_VERTICAL);
+            layout.setPadding(14, 12, 14, 12);
             layout.setBackgroundResource(R.drawable.bg_playlist_card);
 
             RecyclerView.LayoutParams params = new RecyclerView.LayoutParams(
                     RecyclerView.LayoutParams.MATCH_PARENT,
                     RecyclerView.LayoutParams.WRAP_CONTENT
             );
-
             params.setMargins(0, 0, 0, 10);
             layout.setLayoutParams(params);
 
             ImageView image = new ImageView(parent.getContext());
-            image.setLayoutParams(new LinearLayout.LayoutParams(120, 120));
+            image.setLayoutParams(new LinearLayout.LayoutParams(88, 88));
             image.setScaleType(ImageView.ScaleType.CENTER_CROP);
+            image.setBackground(null);
+            image.setPadding(0, 0, 0, 0);
 
             LinearLayout textContainer = new LinearLayout(parent.getContext());
             textContainer.setOrientation(LinearLayout.VERTICAL);
             textContainer.setPadding(14, 0, 0, 0);
-            textContainer.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
+            textContainer.setLayoutParams(new LinearLayout.LayoutParams(
+                    0,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    1
+            ));
 
             TextView title = new TextView(parent.getContext());
             title.setTextColor(0xFFFFFFFF);
-            title.setTextSize(17);
+            title.setTextSize(13);
             title.setTypeface(null, Typeface.BOLD);
             title.setMaxLines(2);
 
             TextView artist = new TextView(parent.getContext());
             artist.setTextColor(0xFFA7B6C2);
-            artist.setTextSize(14);
+            artist.setTextSize(12);
             artist.setMaxLines(1);
 
             textContainer.addView(title);
@@ -1072,35 +1177,41 @@ public class MainActivity extends AppCompatActivity {
         public AlbumViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
             LinearLayout layout = new LinearLayout(parent.getContext());
             layout.setOrientation(LinearLayout.HORIZONTAL);
-            layout.setPadding(8, 8, 8, 8);
+            layout.setGravity(android.view.Gravity.CENTER_VERTICAL);
+            layout.setPadding(14, 12, 14, 12);
             layout.setBackgroundResource(R.drawable.bg_playlist_card);
 
             RecyclerView.LayoutParams params = new RecyclerView.LayoutParams(
                     RecyclerView.LayoutParams.MATCH_PARENT,
                     RecyclerView.LayoutParams.WRAP_CONTENT
             );
-
             params.setMargins(0, 0, 0, 10);
             layout.setLayoutParams(params);
 
             ImageView image = new ImageView(parent.getContext());
-            image.setLayoutParams(new LinearLayout.LayoutParams(120, 120));
+            image.setLayoutParams(new LinearLayout.LayoutParams(88, 88));
             image.setScaleType(ImageView.ScaleType.CENTER_CROP);
+            image.setBackground(null);
+            image.setPadding(0, 0, 0, 0);
 
             LinearLayout textContainer = new LinearLayout(parent.getContext());
             textContainer.setOrientation(LinearLayout.VERTICAL);
             textContainer.setPadding(14, 0, 0, 0);
-            textContainer.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
+            textContainer.setLayoutParams(new LinearLayout.LayoutParams(
+                    0,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    1
+            ));
 
             TextView title = new TextView(parent.getContext());
             title.setTextColor(0xFFFFFFFF);
-            title.setTextSize(17);
+            title.setTextSize(13);
             title.setTypeface(null, Typeface.BOLD);
             title.setMaxLines(2);
 
             TextView artist = new TextView(parent.getContext());
             artist.setTextColor(0xFFA7B6C2);
-            artist.setTextSize(14);
+            artist.setTextSize(12);
             artist.setMaxLines(1);
 
             textContainer.addView(title);
@@ -1168,35 +1279,41 @@ public class MainActivity extends AppCompatActivity {
         public PlaylistViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
             LinearLayout layout = new LinearLayout(parent.getContext());
             layout.setOrientation(LinearLayout.HORIZONTAL);
-            layout.setPadding(8, 8, 8, 8);
+            layout.setGravity(android.view.Gravity.CENTER_VERTICAL);
+            layout.setPadding(14, 12, 14, 12);
             layout.setBackgroundResource(R.drawable.bg_playlist_card);
 
             RecyclerView.LayoutParams params = new RecyclerView.LayoutParams(
                     RecyclerView.LayoutParams.MATCH_PARENT,
                     RecyclerView.LayoutParams.WRAP_CONTENT
             );
-
             params.setMargins(0, 0, 0, 10);
             layout.setLayoutParams(params);
 
             ImageView image = new ImageView(parent.getContext());
-            image.setLayoutParams(new LinearLayout.LayoutParams(120, 120));
-            image.setScaleType(ImageView.ScaleType.FIT_CENTER);
+            image.setLayoutParams(new LinearLayout.LayoutParams(88, 88));
+            image.setScaleType(ImageView.ScaleType.CENTER_CROP);
+            image.setBackground(null);
+            image.setPadding(0, 0, 0, 0);
 
             LinearLayout textContainer = new LinearLayout(parent.getContext());
             textContainer.setOrientation(LinearLayout.VERTICAL);
             textContainer.setPadding(14, 0, 0, 0);
-            textContainer.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
+            textContainer.setLayoutParams(new LinearLayout.LayoutParams(
+                    0,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    1
+            ));
 
             TextView title = new TextView(parent.getContext());
             title.setTextColor(0xFFFFFFFF);
-            title.setTextSize(17);
+            title.setTextSize(13);
             title.setTypeface(null, Typeface.BOLD);
             title.setMaxLines(2);
 
             TextView description = new TextView(parent.getContext());
             description.setTextColor(0xFFA7B6C2);
-            description.setTextSize(13);
+            description.setTextSize(12);
             description.setMaxLines(3);
 
             textContainer.addView(title);
@@ -1223,7 +1340,7 @@ public class MainActivity extends AppCompatActivity {
             if (playlist.getImageUrl() != null && !playlist.getImageUrl().isEmpty()) {
                 Glide.with(holder.image.getContext())
                         .load(playlist.getImageUrl())
-                        .fitCenter()
+                        .centerCrop()
                         .into(holder.image);
             } else {
                 holder.image.setImageResource(R.drawable.logo);

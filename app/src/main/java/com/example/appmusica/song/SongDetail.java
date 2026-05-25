@@ -2,8 +2,11 @@ package com.example.appmusica.song;
 
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.res.ColorStateList;
+import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
+import android.view.MotionEvent;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
@@ -60,6 +63,8 @@ public class SongDetail extends AppCompatActivity {
         btnBack = findViewById(R.id.btnBack);
         btnOpenSpotify = findViewById(R.id.btnOpenSpotify);
 
+        configurarEstrellasDoradas(ratingSong);
+
         globalSongPrefs = getSharedPreferences(GLOBAL_SONG_PREFS, MODE_PRIVATE);
         userProfilePrefs = getSharedPreferences(getUserProfilePrefsName(), MODE_PRIVATE);
 
@@ -106,6 +111,35 @@ public class SongDetail extends AppCompatActivity {
         btnBack.setOnClickListener(v -> finish());
         btnOpenSpotify.setOnClickListener(v -> openSpotifySong());
         btnSaveRating.setOnClickListener(v -> saveRatingAndComment());
+    }
+
+    private void configurarEstrellasDoradas(RatingBar ratingBar) {
+        int dorado = Color.parseColor("#FFD700");
+        int doradoHover = Color.parseColor("#FFC107");
+        int fondoEstrella = Color.parseColor("#1B3148");
+
+        ratingBar.setProgressTintList(ColorStateList.valueOf(dorado));
+        ratingBar.setSecondaryProgressTintList(ColorStateList.valueOf(dorado));
+        ratingBar.setProgressBackgroundTintList(ColorStateList.valueOf(fondoEstrella));
+        ratingBar.setThumbTintList(ColorStateList.valueOf(dorado));
+
+        ratingBar.setOnHoverListener((view, event) -> {
+            if (event.getAction() == MotionEvent.ACTION_HOVER_ENTER ||
+                    event.getAction() == MotionEvent.ACTION_HOVER_MOVE) {
+
+                ratingBar.setProgressTintList(ColorStateList.valueOf(doradoHover));
+                ratingBar.setSecondaryProgressTintList(ColorStateList.valueOf(doradoHover));
+                ratingBar.setThumbTintList(ColorStateList.valueOf(doradoHover));
+
+            } else if (event.getAction() == MotionEvent.ACTION_HOVER_EXIT) {
+
+                ratingBar.setProgressTintList(ColorStateList.valueOf(dorado));
+                ratingBar.setSecondaryProgressTintList(ColorStateList.valueOf(dorado));
+                ratingBar.setThumbTintList(ColorStateList.valueOf(dorado));
+            }
+
+            return false;
+        });
     }
 
     private String getCurrentUsername() {
