@@ -41,11 +41,11 @@
                 android:layout_width="42dp"
                 android:layout_height="42dp"
                 android:layout_marginStart="12dp"
-                android:background="@drawable/bg_button_outline"
                 android:contentDescription="Cuenta"
                 android:padding="3dp"
                 android:scaleType="centerCrop"
-                app:srcCompat="@drawable/foto_perfil" />
+                app:srcCompat="@drawable/logoyellow" />
+
         </LinearLayout>
 
         <LinearLayout
