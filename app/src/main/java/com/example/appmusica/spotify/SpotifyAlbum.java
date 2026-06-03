@@ -15,6 +15,9 @@ public class SpotifyAlbum {
     @SerializedName("release_date")
     private String releaseDate;
 
+    @SerializedName("popularity")
+    private int popularity;
+
     @SerializedName("artists")
     private List<SpotifyArtist> artists;
 
@@ -34,6 +37,10 @@ public class SpotifyAlbum {
 
     public String getReleaseDate() {
         return releaseDate != null ? releaseDate : "";
+    }
+
+    public int getPopularity() {
+        return popularity;
     }
 
     public String getMainArtistName() {

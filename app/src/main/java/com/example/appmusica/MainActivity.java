@@ -57,7 +57,6 @@ public class MainActivity extends AppCompatActivity {
     private ImageButton navHome;
     private Button navSongs;
     private Button navAlbums;
-    private Button navProfile;
     private Button btnExploreMusic;
     private Button btnMyLibrary;
 
@@ -111,8 +110,8 @@ public class MainActivity extends AppCompatActivity {
     private static final String GLOBAL_SONG_PREFS = "song_ratings_global";
     private static final String GLOBAL_ALBUM_PREFS = "album_ratings_global";
 
-    private static final String CLIENT_ID = "bc402c839df64040aca87380ef67c5a8";
-    private static final String CLIENT_SECRET = "eb6414a78146405aa9c05384567839cd";
+    private static final String CLIENT_ID = "1820f2d2508e49ae9bb6b15b3f7e20fa";
+    private static final String CLIENT_SECRET = "a00992045d23409f900d4967717300ce";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -132,7 +131,6 @@ public class MainActivity extends AppCompatActivity {
         navHome = findViewById(R.id.navHome);
         navSongs = findViewById(R.id.navSongs);
         navAlbums = findViewById(R.id.navAlbums);
-        navProfile = findViewById(R.id.navProfile);
         profileIcon = findViewById(R.id.profileIcon);
 
         btnExploreMusic = findViewById(R.id.btnExploreMusic);
@@ -170,7 +168,6 @@ public class MainActivity extends AppCompatActivity {
         navHome = findViewById(R.id.navHome);
         navSongs = findViewById(R.id.navSongs);
         navAlbums = findViewById(R.id.navAlbums);
-        navProfile = findViewById(R.id.navProfile);
         profileIcon = findViewById(R.id.profileIcon);
 
         etSearchSongs = findViewById(R.id.etSearchSongs);
@@ -200,7 +197,6 @@ public class MainActivity extends AppCompatActivity {
         navHome = findViewById(R.id.navHome);
         navSongs = findViewById(R.id.navSongs);
         navAlbums = findViewById(R.id.navAlbums);
-        navProfile = findViewById(R.id.navProfile);
         profileIcon = findViewById(R.id.profileIcon);
 
         etSearchAlbums = findViewById(R.id.etSearchAlbums);
@@ -230,7 +226,6 @@ public class MainActivity extends AppCompatActivity {
         navHome = findViewById(R.id.navHome);
         navSongs = findViewById(R.id.navSongs);
         navAlbums = findViewById(R.id.navAlbums);
-        navProfile = findViewById(R.id.navProfile);
         profileIcon = findViewById(R.id.profileIcon);
 
         btnSortBest = findViewById(R.id.btnSortBest);
@@ -278,12 +273,21 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setupNavigationButtons() {
-        navHome.setOnClickListener(v -> showHomeScreen());
-        navSongs.setOnClickListener(v -> showSongsScreen());
-        navAlbums.setOnClickListener(v -> showAlbumsScreen());
-        navProfile.setOnClickListener(v -> showProfileScreen());
+        if (navHome != null) {
+            navHome.setOnClickListener(v -> showHomeScreen());
+        }
 
-        profileIcon.setOnClickListener(v -> showAccountMenu());
+        if (navSongs != null) {
+            navSongs.setOnClickListener(v -> showSongsScreen());
+        }
+
+        if (navAlbums != null) {
+            navAlbums.setOnClickListener(v -> showAlbumsScreen());
+        }
+
+        if (profileIcon != null) {
+            profileIcon.setOnClickListener(v -> showAccountMenu());
+        }
     }
 
     private void setupSongSearch() {
@@ -386,7 +390,7 @@ public class MainActivity extends AppCompatActivity {
         if (savedUri != null && !savedUri.isEmpty()) {
             profileIcon.setImageURI(Uri.parse(savedUri));
         } else {
-            profileIcon.setImageResource(R.drawable.logo);
+            profileIcon.setImageResource(R.drawable.foto_perfil);
         }
     }
 

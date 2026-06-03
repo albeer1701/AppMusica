@@ -44,30 +44,72 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="18dp"
-            android:text="Álbum"
+            android:text="Canción"
             android:textColor="@android:color/white"
-            android:textSize="25sp"
+            android:textSize="26sp"
             android:textStyle="bold" />
 
         <TextView
             android:id="@+id/tvAlbumArtist"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
+            android:layout_marginTop="8dp"
             android:text="Artista"
-            android:textColor="#A7B6C2"
-            android:textSize="15sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:id="@+id/tvAlbumAverageRating"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="18dp"
-            android:text="Media: sin valoraciones"
-            android:textColor="@android:color/white"
+            android:textColor="#C7C7C7"
             android:textSize="16sp"
             android:textStyle="bold" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/bg_card"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="10dp">
+
+            <TextView
+                android:id="@+id/tvAlbumAverageRating"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Media:"
+                android:textColor="@android:color/white"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+
+            <Space
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1" />
+
+            <RatingBar
+                android:id="@+id/ratingAverageAlbum"
+                style="?android:attr/ratingBarStyleSmall"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:isIndicator="true"
+                android:numStars="5"
+                android:progressBackgroundTint="#333333"
+                android:progressTint="#FFE600"
+                android:rating="0"
+                android:secondaryProgressTint="#FFE600"
+                android:stepSize="0.5" />
+
+            <Space
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1" />
+
+            <TextView
+                android:id="@+id/tvAlbumAverageRatingNumber"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="sin valoraciones"
+                android:textColor="@android:color/white"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+
+        </LinearLayout>
 
         <TextView
             android:layout_width="match_parent"

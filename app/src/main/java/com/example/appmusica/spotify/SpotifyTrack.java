@@ -15,6 +15,9 @@ public class SpotifyTrack {
     @SerializedName("uri")
     private String uri;
 
+    @SerializedName("popularity")
+    private int popularity;
+
     @SerializedName("artists")
     private List<SpotifyArtist> artists;
 
@@ -34,6 +37,10 @@ public class SpotifyTrack {
 
     public String getUri() {
         return uri;
+    }
+
+    public int getPopularity() {
+        return popularity;
     }
 
     public List<SpotifyArtist> getArtists() {

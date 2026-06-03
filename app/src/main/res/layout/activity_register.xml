@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/bg_screen"
@@ -17,7 +18,7 @@
             android:layout_height="150dp"
             android:contentDescription="Logo YourTune"
             android:scaleType="fitCenter"
-            android:src="@drawable/yourtune_logo" />
+            android:src="@drawable/yourtunelogotwo" />
 
         <TextView
             android:layout_width="match_parent"
@@ -40,8 +41,8 @@
             android:paddingStart="16dp"
             android:paddingEnd="16dp"
             android:singleLine="true"
-            android:textColor="#000000"
-            android:textColorHint="#666666"
+            android:textColor="@android:color/white"
+            android:textColorHint="#A7B6C2"
             android:textStyle="bold" />
 
         <EditText
@@ -55,8 +56,8 @@
             android:paddingStart="16dp"
             android:paddingEnd="16dp"
             android:singleLine="true"
-            android:textColor="#000000"
-            android:textColorHint="#666666"
+            android:textColor="@android:color/white"
+            android:textColorHint="#A7B6C2"
             android:textStyle="bold" />
 
         <EditText
@@ -70,8 +71,8 @@
             android:paddingStart="16dp"
             android:paddingEnd="16dp"
             android:singleLine="true"
-            android:textColor="#000000"
-            android:textColorHint="#666666"
+            android:textColor="@android:color/white"
+            android:textColorHint="#A7B6C2"
             android:textStyle="bold" />
 
         <Button
@@ -81,6 +82,7 @@
             android:layout_marginTop="22dp"
             android:background="@drawable/bg_button_selected"
             android:backgroundTint="@null"
+            app:backgroundTint="@null"
             android:text="Registrarme"
             android:textAllCaps="false"
             android:textColor="@android:color/white"

@@ -20,17 +20,23 @@ import com.bumptech.glide.Glide;
 import com.example.appmusica.R;
 
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.Set;
 
 public class SongDetail extends AppCompatActivity {
 
     private ImageView ivSongCover;
+
     private TextView tvSongTitle;
     private TextView tvSongArtist;
     private TextView tvAverageRating;
     private TextView tvCommentsList;
+
     private RatingBar ratingSong;
+    private RatingBar ratingAverageSong;
+
     private EditText etSongReview;
+
     private Button btnSaveRating;
     private Button btnBack;
     private Button btnOpenSpotify;
@@ -52,37 +58,68 @@ public class SongDetail extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_song_detail);
 
-        ivSongCover = findViewById(R.id.ivSongCover);
-        tvSongTitle = findViewById(R.id.tvSongTitle);
-        tvSongArtist = findViewById(R.id.tvSongArtist);
-        tvAverageRating = findViewById(R.id.tvAverageRating);
-        tvCommentsList = findViewById(R.id.tvCommentsList);
-        ratingSong = findViewById(R.id.ratingSong);
-        etSongReview = findViewById(R.id.etSongReview);
-        btnSaveRating = findViewById(R.id.btnSaveRating);
-        btnBack = findViewById(R.id.btnBack);
-        btnOpenSpotify = findViewById(R.id.btnOpenSpotify);
-
+        findViews();
         configurarEstrellasDoradas(ratingSong);
+        configurarEstrellasDoradas(ratingAverageSong);
+        configurarRatingBars();
 
         globalSongPrefs = getSharedPreferences(GLOBAL_SONG_PREFS, MODE_PRIVATE);
         userProfilePrefs = getSharedPreferences(getUserProfilePrefsName(), MODE_PRIVATE);
 
+        cargarDatosIntent();
+        mostrarDatosCancion();
+        loadSongData();
+
+        btnBack.setOnClickListener(v -> finish());
+        btnOpenSpotify.setOnClickListener(v -> openSpotifySong());
+        btnSaveRating.setOnClickListener(v -> saveRatingAndComment());
+    }
+
+    private void findViews() {
+        ivSongCover = findViewById(R.id.ivSongCover);
+
+        tvSongTitle = findViewById(R.id.tvSongTitle);
+        tvSongArtist = findViewById(R.id.tvSongArtist);
+        tvAverageRating = findViewById(R.id.tvAverageRating);
+        tvCommentsList = findViewById(R.id.tvCommentsList);
+
+        ratingSong = findViewById(R.id.ratingSong);
+        ratingAverageSong = findViewById(R.id.ratingAverageSong);
+
+        etSongReview = findViewById(R.id.etSongReview);
+
+        btnSaveRating = findViewById(R.id.btnSaveRating);
+        btnBack = findViewById(R.id.btnBack);
+        btnOpenSpotify = findViewById(R.id.btnOpenSpotify);
+    }
+
+    private void configurarRatingBars() {
+        ratingSong.setNumStars(5);
+        ratingSong.setStepSize(0.5f);
+        ratingSong.setRating(0f);
+        ratingSong.setIsIndicator(false);
+
+        ratingAverageSong.setNumStars(5);
+        ratingAverageSong.setStepSize(0.5f);
+        ratingAverageSong.setIsIndicator(true);
+    }
+
+    private void cargarDatosIntent() {
         songId = getIntent().getStringExtra("song_id");
         songName = getIntent().getStringExtra("song_name");
         artistName = getIntent().getStringExtra("artist_name");
         imageUrl = getIntent().getStringExtra("song_image_url");
         spotifyUrl = getIntent().getStringExtra("song_spotify_url");
 
-        if (songId == null || songId.isEmpty()) {
+        if (songId == null || songId.trim().isEmpty()) {
             songId = "unknown_song";
         }
 
-        if (songName == null || songName.isEmpty()) {
+        if (songName == null || songName.trim().isEmpty()) {
             songName = "Canción desconocida";
         }
 
-        if (artistName == null || artistName.isEmpty()) {
+        if (artistName == null || artistName.trim().isEmpty()) {
             artistName = "Artista desconocido";
         }
 
@@ -93,7 +130,9 @@ public class SongDetail extends AppCompatActivity {
         if (spotifyUrl == null) {
             spotifyUrl = "";
         }
+    }
 
+    private void mostrarDatosCancion() {
         tvSongTitle.setText(songName);
         tvSongArtist.setText(artistName);
 
@@ -105,18 +144,16 @@ public class SongDetail extends AppCompatActivity {
         } else {
             ivSongCover.setImageResource(R.drawable.logo);
         }
-
-        loadSongData();
-
-        btnBack.setOnClickListener(v -> finish());
-        btnOpenSpotify.setOnClickListener(v -> openSpotifySong());
-        btnSaveRating.setOnClickListener(v -> saveRatingAndComment());
     }
 
     private void configurarEstrellasDoradas(RatingBar ratingBar) {
-        int dorado = Color.parseColor("#FFD700");
-        int doradoHover = Color.parseColor("#FFC107");
-        int fondoEstrella = Color.parseColor("#1B3148");
+        if (ratingBar == null) {
+            return;
+        }
+
+        int dorado = Color.parseColor("#FFE600");
+        int doradoHover = Color.parseColor("#FFD700");
+        int fondoEstrella = Color.parseColor("#333333");
 
         ratingBar.setProgressTintList(ColorStateList.valueOf(dorado));
         ratingBar.setSecondaryProgressTintList(ColorStateList.valueOf(dorado));
@@ -158,7 +195,7 @@ public class SongDetail extends AppCompatActivity {
     }
 
     private void openSpotifySong() {
-        if (spotifyUrl == null || spotifyUrl.isEmpty()) {
+        if (spotifyUrl == null || spotifyUrl.trim().isEmpty()) {
             Toast.makeText(this, "No hay enlace de Spotify para esta canción", Toast.LENGTH_SHORT).show();
             return;
         }
@@ -183,15 +220,14 @@ public class SongDetail extends AppCompatActivity {
         int newCount = currentCount + 1;
 
         String oldComments = globalSongPrefs.getString(getCommentsKey(), "");
-
         String username = getCurrentUsername();
 
         String newComment;
 
         if (!comment.isEmpty()) {
-            newComment = username + " ★ " + rating + "/5 - " + comment;
+            newComment = username + " ★ " + formatRating(rating) + "/5 - " + comment;
         } else {
-            newComment = username + " ★ " + rating + "/5 - Sin comentario";
+            newComment = username + " ★ " + formatRating(rating) + "/5 - Sin comentario";
         }
 
         String updatedComments;
@@ -210,7 +246,7 @@ public class SongDetail extends AppCompatActivity {
 
         saveSongInUserProfile(!comment.isEmpty());
 
-        ratingSong.setRating(0);
+        ratingSong.setRating(0f);
         etSongReview.setText("");
 
         loadSongData();
@@ -226,7 +262,7 @@ public class SongDetail extends AppCompatActivity {
 
         if (savedSongs != null) {
             for (String item : savedSongs) {
-                if (item != null && item.startsWith(songId + "§")) {
+                if (item != null && item.startsWith(clean(songId) + "§")) {
                     String[] parts = item.split("§", -1);
 
                     if (parts.length >= 5 && parts[4].equals("true")) {
@@ -261,9 +297,11 @@ public class SongDetail extends AppCompatActivity {
 
         if (count == 0) {
             tvAverageRating.setText("Media: sin valoraciones");
+            ratingAverageSong.setRating(0f);
         } else {
             float average = total / count;
-            tvAverageRating.setText("Media: " + String.format("%.1f", average) + "/5 (" + count + ")");
+            tvAverageRating.setText("Media: " + formatRating(average) + "/5 (" + count + ")");
+            ratingAverageSong.setRating(average);
         }
 
         if (comments == null || comments.isEmpty()) {
@@ -274,15 +312,15 @@ public class SongDetail extends AppCompatActivity {
     }
 
     private String getTotalKey() {
-        return "song_" + songId + "_total";
+        return "song_" + clean(songId) + "_total";
     }
 
     private String getCountKey() {
-        return "song_" + songId + "_count";
+        return "song_" + clean(songId) + "_count";
     }
 
     private String getCommentsKey() {
-        return "song_" + songId + "_comments";
+        return "song_" + clean(songId) + "_comments";
     }
 
     private String clean(String value) {
@@ -292,6 +330,17 @@ public class SongDetail extends AppCompatActivity {
 
         return value
                 .replace("§", " ")
-                .replace(" ", "_");
+                .replace("\n", " ")
+                .replace("\r", " ")
+                .replace(" ", "_")
+                .trim();
+    }
+
+    private String formatRating(float value) {
+        if (value == (int) value) {
+            return String.valueOf((int) value);
+        }
+
+        return String.format(Locale.getDefault(), "%.1f", value);
     }
 }
